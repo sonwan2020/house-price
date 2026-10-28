@@ -40,25 +40,42 @@ predict/
 
 ## Quickstart
 
-### Docker (recommended)
+### Docker Compose (recommended)
+
+`docker-compose.yaml` lives at the **repository root** (`../` from this
+folder) as the single entry point for the whole project; more services
+will be added as siblings under `services:` there (see the comments in
+the file). Run from the repo root:
 
 ```bash
-# build the image (includes the trained artifacts from app/models/)
-docker build -t house-price-api .
+cd ..                          # repository root
 
-# run it, publishing port 8000
-docker run -d --name house-price-api -p 8000:8000 house-price-api
+# start everything (builds the image if missing)
+docker compose up -d
+
+# rebuild after code changes, then start
+docker compose up -d --build
 
 # check it's healthy
-docker ps                    # STATUS shows "(healthy)" once the healthcheck passes
+docker compose ps           # STATUS shows "(healthy)" once the healthcheck passes
 curl http://localhost:8000/api/v1/health
 
-# stop / remove
-docker stop house-price-api && docker rm house-price-api
+# follow logs / stop and remove everything
+docker compose logs -f api
+docker compose down
 ```
 
-The image runs as a non-root user, includes a HEALTHCHECK against
-`/api/v1/health`, and binds `0.0.0.0:8000` inside the container.
+The host port is configurable via `API_PORT` in the repo root `.env`
+(see `.env.example`). The image runs as a non-root user, includes a
+HEALTHCHECK against `/api/v1/health`, and binds `0.0.0.0:8000` inside
+the container.
+
+### Plain Docker
+
+```bash
+docker build -t house-price-api .
+docker run -d --name house-price-api -p 8000:8000 house-price-api
+```
 
 ### Local (without Docker)
 

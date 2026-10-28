@@ -1,0 +1,33 @@
+# Docker Compose entry point for the whole repo — run the full stack from
+# the repository root with one command:
+#   docker compose up -d            # start everything (builds if image is missing)
+#   docker compose up -d --build    # rebuild images, then start
+#   docker compose down             # stop and remove everything
+#   docker compose logs -f api      # follow one service's logs
+#
+# Compose interpolates ${VAR:-default} from ./.env at the repo root, so
+# local overrides (API_PORT, MODEL_VERSION) live there.
+#
+# Adding a service later (database, worker, frontend, ...): add a sibling
+# entry under `services:` with an `image:` tag, a `build:` context pointing
+# at its own directory, ${VAR:-default} settings for ports/paths, and —
+# where startup order matters — a depends_on with the health condition:
+#   depends_on:
+#     api:
+#       condition: service_healthy
+
+services:
+  api:
+    build:
+      context: ./predict
+      dockerfile: Dockerfile
+    image: house-price-api:latest
+    container_name: house-price-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Reported by GET /api/v1/model-info; bump after retraining.
+      MODEL_VERSION: ${MODEL_VERSION:-1.0}
+    # The Dockerfile's HEALTHCHECK is inherited, so later services can
+    # depend on `api: {condition: service_healthy}`.
+    restart: unless-stopped
