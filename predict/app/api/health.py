@@ -1,4 +1,4 @@
-"""GET /api/v1/health — liveness check."""
+"""GET /api/health — liveness check (version-independent)."""
 
 from fastapi import APIRouter
 

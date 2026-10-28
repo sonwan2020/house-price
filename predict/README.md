@@ -12,10 +12,10 @@ predict/
 │   ├── config.py                # configuration (paths, host/port, model version)
 │   ├── api/                     # HTTP layer
 │   │   ├── router.py            # aggregates all sub-routers under /api
+│   │   ├── health.py            # GET  /api/health (version-independent)
 │   │   └── v1/
 │   │       ├── predict.py       # POST /api/v1/predict
-│   │       ├── model_info.py    # GET  /api/v1/model-info
-│   │       └── health.py        # GET  /api/v1/health
+│   │       └── model_info.py    # GET  /api/v1/model-info
 │   ├── schemas/                 # Pydantic request/response models
 │   │   └── predict.py           # HouseFeatures, HouseInfo, HousePrice, ...
 │   ├── services/                # business logic (pure Python, no FastAPI)
@@ -27,9 +27,10 @@ predict/
 │   └── models/                  # trained artifacts (generated, not code)
 │       ├── house_price_model.joblib
 │       └── model_metrics.json
-├── data/                        # raw training CSVs (source for scripts/train.py)
+├── data/                        # raw training and test CSVs
 ├── scripts/
-│   └── train.py                 # trains the model, outputs app/models/*
+│   ├── train.py                 # trains and saves app/models/*
+│   └── test.py                  # predicts rows from a test CSV
 ├── tests/
 │   ├── test_predict_api.py      # HTTP contract tests
 │   └── test_predictor.py        # business logic tests (no server needed)
@@ -58,7 +59,7 @@ docker compose up -d --build
 
 # check it's healthy
 docker compose ps           # STATUS shows "(healthy)" once the healthcheck passes
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/api/health
 
 # follow logs / stop and remove everything
 docker compose logs -f api
@@ -67,8 +68,21 @@ docker compose down
 
 The host port is configurable via `API_PORT` in the repo root `.env`
 (see `.env.example`). The image runs as a non-root user, includes a
-HEALTHCHECK against `/api/v1/health`, and binds `0.0.0.0:8000` inside
+HEALTHCHECK against `/api/health`, and binds `0.0.0.0:8000` inside
 the container.
+
+On a fresh clone (the artifacts are gitignored) the image build trains the
+model automatically — no manual step needed. The build also retrains when
+`scripts/train.py` or any CSV in `data/` is newer than the artifact
+(Makefile-style freshness check). To retrain explicitly after changing the
+training data:
+
+```bash
+docker compose run --rm --user root \
+  -v ./predict/app/models:/app/app/models \
+  api python scripts/train.py
+docker compose up -d --build   # bake the new artifacts into the image
+```
 
 ### Plain Docker
 
@@ -86,11 +100,22 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 # 2. (optional) retrain the model -> app/models/
 .venv/bin/python scripts/train.py
 
-# 3. run the server (honors .env for host/port)
+# Override the input CSV and/or output artifact paths
+.venv/bin/python scripts/train.py \
+  --train-csv "data/House Price Dataset.csv" \
+  --model-file app/models/house_price_model.joblib \
+  --metrics-file app/models/model_metrics.json
+
+# 3. load the saved model and print test predictions as a table
+.venv/bin/python scripts/test.py \
+  --test-csv "data/Test Data For Prediction.csv" \
+  --model-file app/models/house_price_model.joblib
+
+# 4. run the server (honors .env for host/port)
 .venv/bin/python -m app.main
 # or: .venv/bin/python -m uvicorn app.main:app --reload
 
-# 4. run the tests
+# 5. run the tests
 .venv/bin/python -m pytest
 ```
 
@@ -153,6 +178,6 @@ Error codes embedded in `message`: `NOT_OBJECT`, `MISSING_FIELD`,
 Returns the model coefficients (intercept + per-feature) and the
 cross-validation performance metrics saved by `scripts/train.py`.
 
-### GET `/api/v1/health`
+### GET `/api/health`
 
-Returns `{"status": "ok"}` with HTTP 200.
+Version-independent liveness check. Returns `{"status": "ok"}` with HTTP 200.

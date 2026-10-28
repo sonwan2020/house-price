@@ -5,6 +5,16 @@
 #   docker compose down             # stop and remove everything
 #   docker compose logs -f api      # follow one service's logs
 #
+# Fresh clone? The image build trains the model automatically when
+# app/models/house_price_model.joblib is missing (two-stage Dockerfile).
+#
+# Retrain after changing the training data (persists to the host, then
+# rebuild to bake the new artifacts into the image):
+#   docker compose run --rm --user root \
+#     -v ./predict/app/models:/app/app/models \
+#     api python scripts/train.py
+#   docker compose up -d --build
+#
 # Compose interpolates ${VAR:-default} from ./.env at the repo root, so
 # local overrides (API_PORT, MODEL_VERSION) live there.
 #

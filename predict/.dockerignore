@@ -5,10 +5,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Not needed at runtime (model artifacts ship inside app/models/)
+# data/ and scripts/ are needed by the Dockerfile's build-time training
+# step (runs when app/models/house_price_model.joblib is missing)
 tests/
-scripts/
-data/
 
 # VCS, docs, local config
 .git/
