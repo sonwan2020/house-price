@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""Train the linear-regression house-price model.
+
+Reads the raw CSVs from ``data/`` and writes the trained model
+(``house_price_model.joblib``) plus its cross-validation metrics
+(``model_metrics.json``) into ``app/models/`` for the API to load.
+
+Usage:  .venv/bin/python scripts/train.py
+"""
 
 import json
 from pathlib import Path
@@ -9,7 +17,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import KFold, cross_validate
 
-DATA_DIR = Path(__file__).resolve().parent / "data"
+ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = ROOT / "data"
+MODELS_DIR = ROOT / "app" / "models"
 TRAIN_PATH = DATA_DIR / "House Price Dataset.csv"
 TEST_PATH = DATA_DIR / "Test Data For Prediction.csv"
 TARGET = "price"
@@ -63,11 +73,13 @@ coefs = pd.Series(model.coef_, index=features).sort_values(key=abs, ascending=Fa
 print("intercept:", model.intercept_)
 print(coefs)
 
-MODEL_FILE = DATA_DIR / "house_price_model.joblib"
+# 5. Persist model + metrics for the API
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+MODEL_FILE = MODELS_DIR / "house_price_model.joblib"
 print(f"Model save to {MODEL_FILE}")
 joblib.dump(model, MODEL_FILE)
 
-# Persist performance metrics for the API's /model-info endpoint
 metrics = {
     "model_type": type(model).__name__,
     "target": TARGET,
@@ -79,7 +91,7 @@ metrics = {
         "r2_train": float(cv["train_r2"].mean()),
     },
 }
-METRICS_FILE = DATA_DIR / "model_metrics.json"
+METRICS_FILE = MODELS_DIR / "model_metrics.json"
 print(f"Metrics save to {METRICS_FILE}")
 METRICS_FILE.write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
 

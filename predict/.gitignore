@@ -53,3 +53,4 @@ node_modules/
 Thumbs.db
 
 *.joblib
+app/models/model_metrics.json
