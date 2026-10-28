@@ -1,0 +1,21 @@
+# Python / tooling
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Not needed at runtime (model artifacts ship inside app/models/)
+tests/
+scripts/
+data/
+
+# VCS, docs, local config
+.git/
+.gitignore
+README.md
+pytest.ini
+.env
+.env.example
+Dockerfile
+.dockerignore

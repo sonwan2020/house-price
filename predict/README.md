@@ -40,6 +40,28 @@ predict/
 
 ## Quickstart
 
+### Docker (recommended)
+
+```bash
+# build the image (includes the trained artifacts from app/models/)
+docker build -t house-price-api .
+
+# run it, publishing port 8000
+docker run -d --name house-price-api -p 8000:8000 house-price-api
+
+# check it's healthy
+docker ps                    # STATUS shows "(healthy)" once the healthcheck passes
+curl http://localhost:8000/api/v1/health
+
+# stop / remove
+docker stop house-price-api && docker rm house-price-api
+```
+
+The image runs as a non-root user, includes a HEALTHCHECK against
+`/api/v1/health`, and binds `0.0.0.0:8000` inside the container.
+
+### Local (without Docker)
+
 ```bash
 # 1. (once) install dependencies
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
