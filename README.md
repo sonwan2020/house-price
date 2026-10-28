@@ -2,8 +2,10 @@
 
 A solution for house price prediction and management. The `predict/`
 service provides a FastAPI that predicts house prices from a trained
-linear-regression model. `docker-compose.yaml` at this root is the single
-entry point for running the whole stack.
+linear-regression model; the `portal/` service is the Next.js frontend
+(form, validation, results, history, comparison).
+`docker-compose.yaml` at this root is the single entry point for running
+the whole stack.
 
 ## Structure
 
@@ -11,9 +13,12 @@ entry point for running the whole stack.
 .
 ├── docker-compose.yaml     # orchestrates all services (single command start)
 ├── .env.example            # compose interpolation vars (copy to .env)
-└── predict/                # house price prediction API (FastAPI)
-    ├── Dockerfile          # builds the image; trains the model if artifacts are missing
-    └── README.md           # API details: endpoints, validation rules, local dev
+├── predict/                # house price prediction API (FastAPI)
+│   ├── Dockerfile          # builds the image; trains the model if artifacts are missing
+│   └── README.md           # API details: endpoints, validation rules, local dev
+└── portal/                 # frontend (Next.js App Router, Tailwind, Recharts)
+    ├── Dockerfile          # multi-stage build → standalone Next server
+    └── README.md           # portal details: pages, proxy routes, validation
 ```
 
 More services will be added as siblings of `predict/` and wired into
@@ -34,7 +39,10 @@ docker compose up -d --build
 docker compose ps           # STATUS shows "(healthy)" once the healthcheck passes
 curl http://localhost:8000/api/health
 
-# 4. stop and remove everything
+# 4. open the portal
+#    http://localhost:3000
+
+# 5. stop and remove everything
 docker compose down
 ```
 
@@ -62,4 +70,5 @@ this root (copy `.env.example` to `.env` and adjust).
 
 | Service | Description | Where to look |
 |---------|-------------|---------------|
-| `api`   | House price prediction API (FastAPI) | [`predict/README.md`](predict/README.md) |
+| `api`    | House price prediction API (FastAPI) | [`predict/README.md`](predict/README.md) |
+| `portal` | Property Value Estimator frontend (Next.js) | [`portal/README.md`](portal/README.md) |
