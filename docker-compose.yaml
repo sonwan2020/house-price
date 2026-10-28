@@ -41,3 +41,20 @@ services:
     # The Dockerfile's HEALTHCHECK is inherited, so later services can
     # depend on `api: {condition: service_healthy}`.
     restart: unless-stopped
+
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    image: house-price-portal:latest
+    container_name: house-price-portal
+    ports:
+      - "${PORTAL_PORT:-3000}:3000"
+    environment:
+      # The portal calls the API server-side over the internal network;
+      # the browser never talks to the FastAPI service directly.
+      PYTHON_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
