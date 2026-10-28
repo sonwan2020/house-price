@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 from pathlib import Path
 
 import joblib
@@ -65,6 +66,22 @@ print(coefs)
 MODEL_FILE = DATA_DIR / "house_price_model.joblib"
 print(f"Model save to {MODEL_FILE}")
 joblib.dump(model, MODEL_FILE)
+
+# Persist performance metrics for the API's /model-info endpoint
+metrics = {
+    "model_type": type(model).__name__,
+    "target": TARGET,
+    "features": features,
+    "cv": {
+        "r2": float(cv["test_r2"].mean()),
+        "rmse": float(-cv["test_rmse"].mean()),
+        "mae": float(-cv["test_mae"].mean()),
+        "r2_train": float(cv["train_r2"].mean()),
+    },
+}
+METRICS_FILE = DATA_DIR / "model_metrics.json"
+print(f"Metrics save to {METRICS_FILE}")
+METRICS_FILE.write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
 
 y_pred = model.predict(X_test)
 
