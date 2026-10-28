@@ -13,11 +13,9 @@ from app.core.errors import ErrorCode, reason
 from app.schemas.predict import FEATURE_ORDER, HouseInfo, HousePrice
 
 
-def _echo_id(item: Any) -> int | str | None:
-    """Echo the input id when it has a valid type, else None."""
-    if isinstance(item, (int, str)) and not isinstance(item, bool):
-        return item
-    return None
+def _echo_id(item: Any) -> str:
+    """Echo the input id when it is a string, else an empty string."""
+    return item if isinstance(item, str) else ""
 
 
 def _format_pydantic_errors(exc: ValidationError) -> str:
@@ -36,12 +34,16 @@ class PredictionOutcome:
     results: list[HousePrice] = field(default_factory=list)
 
     @property
+    def total(self) -> int:
+        return len(self.results)
+
+    @property
     def ok_count(self) -> int:
         return sum(1 for r in self.results if r.message == "")
 
     @property
     def fail_count(self) -> int:
-        return len(self.results) - self.ok_count
+        return self.total - self.ok_count
 
 
 class Predictor:
@@ -80,7 +82,7 @@ class Predictor:
                 results[index] = HousePrice(
                     index=index,
                     id=info.id,
-                    price=round(float(price), 2),
+                    price=round(float(price) / 1000) * 1000,  # nearest 1000, int
                     message="",
                 )
 
@@ -93,8 +95,8 @@ class Predictor:
         if not isinstance(item, dict):
             return None, HousePrice(
                 index=index,
-                id=None,
-                price=0.0,
+                id="",
+                price=0,
                 message=reason(ErrorCode.NOT_OBJECT, "item must be a JSON object"),
             )
 
@@ -112,16 +114,14 @@ class Predictor:
             if name in ("bedrooms", "year_built") and float(value) != int(value):
                 problems.append(reason(ErrorCode.NOT_INTEGER, f"'{name}' must be an integer"))
 
-        if "id" in item and item["id"] is not None and (
-            isinstance(item["id"], bool) or not isinstance(item["id"], (int, str))
-        ):
-            problems.append(reason(ErrorCode.INVALID_ID, "'id' must be a string, integer, or null"))
+        if "id" in item and not isinstance(item["id"], str):
+            problems.append(reason(ErrorCode.INVALID_ID, "'id' must be a string"))
 
         if problems:
             return None, HousePrice(
                 index=index,
                 id=_echo_id(item.get("id")),
-                price=0.0,
+                price=0,
                 message="; ".join(problems),
             )
 
@@ -131,7 +131,7 @@ class Predictor:
             return None, HousePrice(
                 index=index,
                 id=_echo_id(item.get("id")),
-                price=0.0,
+                price=0,
                 message=reason(ErrorCode.OUT_OF_RANGE, _format_pydantic_errors(exc)),
             )
         return info, None

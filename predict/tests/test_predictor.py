@@ -4,6 +4,7 @@ import joblib
 import pytest
 
 from app.config import settings
+from app.schemas.predict import CURRENT_YEAR
 from app.services.predictor import Predictor
 
 
@@ -35,18 +36,20 @@ def test_all_valid_items_are_predicted(predictor):
     assert [r.index for r in outcome.results] == [0, 1]
     assert all(r.price > 0 for r in outcome.results)
     assert all(r.message == "" for r in outcome.results)
-    assert outcome.results[0].id is None
+    assert outcome.results[0].id == ""  # omitted -> empty string
     assert outcome.results[1].id == "house-1"
 
 
 def test_price_matches_training_run(predictor):
-    # First row of Test Data For Prediction.csv in scripts/train.py output.
+    # First row of Test Data For Prediction.csv in scripts/train.py output:
+    # 250879.73 rounded to the nearest 1000.
     outcome = predictor.predict_many([valid_item()])
-    assert outcome.results[0].price == pytest.approx(250879.73)
+    assert outcome.results[0].price == 251000
+    assert isinstance(outcome.results[0].price, int)
 
 
 def test_missing_fields_fail_with_code(predictor):
-    outcome = predictor.predict_many([{"id": 1}])
+    outcome = predictor.predict_many([{"id": "x"}])
     assert outcome.ok_count == 0
     assert outcome.fail_count == 1
     result = outcome.results[0]
@@ -80,10 +83,44 @@ def test_range_violation_fails_with_code(predictor):
     assert "[OUT_OF_RANGE]" in outcome.results[0].message
 
 
+def test_year_built_upper_boundary(predictor):
+    """CURRENT_YEAR + x is valid for x <= 5, invalid for x > 5."""
+    ok = predictor.predict_many(
+        [
+            valid_item(year_built=CURRENT_YEAR),
+            valid_item(year_built=CURRENT_YEAR + 1),
+            valid_item(year_built=CURRENT_YEAR + 5),
+        ]
+    )
+    assert ok.ok_count == 3
+    assert ok.fail_count == 0
+
+    bad = predictor.predict_many(
+        [
+            valid_item(year_built=CURRENT_YEAR + 6),
+            valid_item(year_built=CURRENT_YEAR + 100),
+        ]
+    )
+    assert bad.ok_count == 0
+    assert bad.fail_count == 2
+    assert all("[OUT_OF_RANGE]" in r.message for r in bad.results)
+
+
+def test_year_built_lower_boundary(predictor):
+    ok = predictor.predict_many([valid_item(year_built=1900)])
+    assert ok.ok_count == 1
+
+    bad = predictor.predict_many([valid_item(year_built=1899)])
+    assert bad.fail_count == 1
+    assert "[OUT_OF_RANGE]" in bad.results[0].message
+
+
 def test_invalid_id_fails_with_code(predictor):
-    outcome = predictor.predict_many([valid_item(id=1.5), valid_item(id=True)])
-    assert all(r.price == 0.0 for r in outcome.results)
-    assert all("[INVALID_ID]" in r.message for r in outcome.results)
+    outcome = predictor.predict_many(
+        [valid_item(id=123), valid_item(id=True), valid_item(id=None)]
+    )
+    assert all(r.price == 0 for r in outcome.results)
+    assert all("[INVALID_ID] 'id' must be a string" in r.message for r in outcome.results)
 
 
 def test_non_dict_item_fails(predictor):
@@ -94,7 +131,7 @@ def test_non_dict_item_fails(predictor):
 
 
 def test_partial_batch(predictor):
-    outcome = predictor.predict_many([valid_item(), {"id": 2}, valid_item(id="ok")])
+    outcome = predictor.predict_many([valid_item(), {"id": "bad"}, valid_item(id="ok")])
     assert outcome.ok_count == 2
     assert outcome.fail_count == 1
     assert outcome.results[0].price > 0

@@ -29,7 +29,7 @@ class HouseFeatures(BaseModel):
         gt=0,
         le=100_000,
     )
-    bedrooms: float = Field(
+    bedrooms: int = Field(
         description="Number of bedrooms (integer, 1 to 20).",
         ge=1,
         le=20,
@@ -39,9 +39,9 @@ class HouseFeatures(BaseModel):
         gt=0,
         le=20,
     )
-    year_built: float = Field(
-        description=f"Year the house was built (integer, 1800 to {CURRENT_YEAR + 5}).",
-        ge=1800,
+    year_built: int = Field(
+        description=f"Year the house was built (integer, 1900 to {CURRENT_YEAR + 5}).",
+        ge=1900,
         le=CURRENT_YEAR + 5,
     )
     lot_size: float = Field(
@@ -64,9 +64,9 @@ class HouseFeatures(BaseModel):
 class HouseInfo(HouseFeatures):
     """One house to predict: all features required, plus an optional id."""
 
-    id: int | str | None = Field(
-        default=None,
-        description="Optional client-supplied identifier, echoed back in the response.",
+    id: str = Field(
+        default="",
+        description="Optional client-supplied identifier (string), echoed back in the response. Defaults to empty string when omitted.",
     )
 
 
@@ -76,11 +76,11 @@ class HousePrice(BaseModel):
     index: int = Field(
         description="Position of the input item in the request array, starting at 0."
     )
-    id: int | str | None = Field(
-        default=None, description="Echo of the optional input id."
+    id: str = Field(
+        default="", description="Echo of the optional input id; empty string when not provided."
     )
-    price: float = Field(
-        description="Predicted price, or 0 when the item could not be predicted."
+    price: int = Field(
+        description="Predicted price rounded to the nearest 1000, or 0 when the item could not be predicted."
     )
     message: str = Field(
         default="",
@@ -96,5 +96,18 @@ class PredictRequest(RootModel[list[HouseInfo]]):
     """
 
 
-class PredictResponse(RootModel[list[HousePrice]]):
-    """Response body of POST /predict: a JSON array of HousePrice objects."""
+class Summary(BaseModel):
+    """Batch counts returned in the predict response."""
+
+    total: int = Field(description="Total number of input items.")
+    succeed: int = Field(description="Items predicted successfully.")
+    failed: int = Field(description="Items that failed validation.")
+
+
+class PredictResponse(BaseModel):
+    """Response body of POST /predict: batch summary plus one entry per item."""
+
+    summary: Summary = Field(description="Counts for this batch.")
+    predicts: list[HousePrice] = Field(
+        description="One entry per input item, in input order."
+    )

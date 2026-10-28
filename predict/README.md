@@ -100,9 +100,10 @@ Interactive docs: http://127.0.0.1:8000/docs
 
 ### POST `/api/v1/predict`
 
-Accepts a JSON array of houses (features + optional `id`) and returns a JSON
-array of results in the same order, with `index`, `id`, `price`, `message`.
-Failed items get `price = 0` and the reason (with a machine-readable code) in
+Accepts a JSON array of houses (features + optional `id`) and returns a
+batch `summary` plus `predicts` in the same order, each with `index`, `id`,
+`price`, `message`. `price` is rounded to the nearest 1000 (int). Failed
+items get `price = 0` and the reason (with a machine-readable code) in
 `message`.
 
 ```bash
@@ -118,14 +119,18 @@ curl -X POST http://127.0.0.1:8000/api/v1/predict \
 Response:
 
 ```json
-[
-  {"index": 0, "id": "house-1", "price": 250879.73, "message": ""}
-]
+{
+  "summary": {"total": 1, "succeed": 1, "failed": 0},
+  "predicts": [
+    {"index": 0, "id": "house-1", "price": 251000, "message": ""}
+  ]
+}
 ```
 
 Features (all required): `square_footage`, `bedrooms`, `bathrooms`,
 `year_built`, `lot_size`, `distance_to_city_center`, `school_rating`.
-`id` is optional and echoed back unchanged.
+`id` is an optional string, echoed back unchanged; defaults to an empty
+string when omitted.
 
 Validation per item: all fields required, must be numbers, `bedrooms` /
 `year_built` must be integers, plus sanity ranges (positive footage/lot size,

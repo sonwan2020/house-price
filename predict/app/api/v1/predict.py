@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Request
 from fastapi.responses import JSONResponse
 
-from app.schemas.predict import PredictResponse
+from app.schemas.predict import PredictResponse, Summary
 
 router = APIRouter(tags=["prediction"])
 
@@ -29,9 +29,9 @@ def predict(
 ) -> JSONResponse:
     """Predict prices for an array of houses.
 
-    Always returns a JSON array of HousePrice with one entry per input
-    item, in input order. Status: 200 all ok, 207 partial failure,
-    400 all failed.
+    Always returns a summary plus one HousePrice entry per input item,
+    in input order. Prices are rounded to the nearest 1000 (int).
+    Status: 200 all ok, 207 partial failure, 400 all failed.
     """
     outcome = request.app.state.predictor.predict_many(payload)
 
@@ -44,5 +44,12 @@ def predict(
 
     return JSONResponse(
         status_code=status,
-        content=[r.model_dump() for r in outcome.results],
+        content={
+            "summary": Summary(
+                total=outcome.total,
+                succeed=outcome.ok_count,
+                failed=outcome.fail_count,
+            ).model_dump(),
+            "predicts": [r.model_dump() for r in outcome.results],
+        },
     )

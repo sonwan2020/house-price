@@ -7,6 +7,7 @@ from app.schemas.predict import (
     HousePrice,
     PredictRequest,
     PredictResponse,
+    Summary,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "HousePrice",
     "PredictRequest",
     "PredictResponse",
+    "Summary",
 ]
