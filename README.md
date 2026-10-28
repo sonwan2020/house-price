@@ -32,7 +32,7 @@ docker compose up -d --build
 
 # 3. check it's healthy
 docker compose ps           # STATUS shows "(healthy)" once the healthcheck passes
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/api/health
 
 # 4. stop and remove everything
 docker compose down

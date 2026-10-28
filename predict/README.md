@@ -12,10 +12,10 @@ predict/
 │   ├── config.py                # configuration (paths, host/port, model version)
 │   ├── api/                     # HTTP layer
 │   │   ├── router.py            # aggregates all sub-routers under /api
+│   │   ├── health.py            # GET  /api/health (version-independent)
 │   │   └── v1/
 │   │       ├── predict.py       # POST /api/v1/predict
-│   │       ├── model_info.py    # GET  /api/v1/model-info
-│   │       └── health.py        # GET  /api/v1/health
+│   │       └── model_info.py    # GET  /api/v1/model-info
 │   ├── schemas/                 # Pydantic request/response models
 │   │   └── predict.py           # HouseFeatures, HouseInfo, HousePrice, ...
 │   ├── services/                # business logic (pure Python, no FastAPI)
@@ -59,7 +59,7 @@ docker compose up -d --build
 
 # check it's healthy
 docker compose ps           # STATUS shows "(healthy)" once the healthcheck passes
-curl http://localhost:8000/api/v1/health
+curl http://localhost:8000/api/health
 
 # follow logs / stop and remove everything
 docker compose logs -f api
@@ -68,7 +68,7 @@ docker compose down
 
 The host port is configurable via `API_PORT` in the repo root `.env`
 (see `.env.example`). The image runs as a non-root user, includes a
-HEALTHCHECK against `/api/v1/health`, and binds `0.0.0.0:8000` inside
+HEALTHCHECK against `/api/health`, and binds `0.0.0.0:8000` inside
 the container.
 
 On a fresh clone (the artifacts are gitignored) the image build trains the
@@ -178,6 +178,6 @@ Error codes embedded in `message`: `NOT_OBJECT`, `MISSING_FIELD`,
 Returns the model coefficients (intercept + per-feature) and the
 cross-validation performance metrics saved by `scripts/train.py`.
 
-### GET `/api/v1/health`
+### GET `/api/health`
 
-Returns `{"status": "ok"}` with HTTP 200.
+Version-independent liveness check. Returns `{"status": "ok"}` with HTTP 200.
