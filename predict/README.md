@@ -127,9 +127,9 @@ Interactive docs: http://127.0.0.1:8000/docs
 
 Accepts a JSON array of houses (features + optional `id`) and returns a
 batch `summary` plus `predicts` in the same order, each with `index`, `id`,
-`price`, `message`. `price` is rounded to the nearest 1000 (int). Failed
+`price`, `reason`. `price` is rounded to the nearest 1000 (int). Failed
 items get `price = 0` and the reason (with a machine-readable code) in
-`message`.
+`reason`.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/predict \
@@ -147,7 +147,7 @@ Response:
 {
   "summary": {"total": 1, "succeed": 1, "failed": 0},
   "predicts": [
-    {"index": 0, "id": "house-1", "price": 251000, "message": ""}
+    {"index": 0, "id": "house-1", "price": 251000, "reason": ""}
   ]
 }
 ```
@@ -170,7 +170,7 @@ Status codes:
 | 400    | all items failed (their `price` is 0) |
 | 422    | body is not a JSON array |
 
-Error codes embedded in `message`: `NOT_OBJECT`, `MISSING_FIELD`,
+Error codes embedded in `reason`: `NOT_OBJECT`, `MISSING_FIELD`,
 `INVALID_TYPE`, `NOT_INTEGER`, `INVALID_ID`, `OUT_OF_RANGE`.
 
 ### GET `/api/v1/model-info`

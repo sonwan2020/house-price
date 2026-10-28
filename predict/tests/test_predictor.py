@@ -35,7 +35,7 @@ def test_all_valid_items_are_predicted(predictor):
     assert outcome.fail_count == 0
     assert [r.index for r in outcome.results] == [0, 1]
     assert all(r.price > 0 for r in outcome.results)
-    assert all(r.message == "" for r in outcome.results)
+    assert all(r.reason == "" for r in outcome.results)
     assert outcome.results[0].id == ""  # omitted -> empty string
     assert outcome.results[1].id == "house-1"
 
@@ -54,33 +54,33 @@ def test_missing_fields_fail_with_code(predictor):
     assert outcome.fail_count == 1
     result = outcome.results[0]
     assert result.price == 0.0
-    assert "[MISSING_FIELD]" in result.message
+    assert "[MISSING_FIELD]" in result.reason
     for name in ("square_footage", "bedrooms", "year_built"):
-        assert f"'{name}' is required" in result.message
+        assert f"'{name}' is required" in result.reason
 
 
 def test_wrong_type_fails_with_code(predictor):
     outcome = predictor.predict_many([valid_item(square_footage="big")])
     result = outcome.results[0]
     assert result.price == 0.0
-    assert "[INVALID_TYPE]" in result.message
-    assert "'square_footage' must be a number" in result.message
+    assert "[INVALID_TYPE]" in result.reason
+    assert "'square_footage' must be a number" in result.reason
 
 
 def test_non_integer_bedrooms_fails(predictor):
     outcome = predictor.predict_many([valid_item(bedrooms=2.5)])
-    assert "[NOT_INTEGER]" in outcome.results[0].message
+    assert "[NOT_INTEGER]" in outcome.results[0].reason
 
 
 def test_null_field_is_missing(predictor):
     outcome = predictor.predict_many([valid_item(year_built=None)])
-    assert "[MISSING_FIELD]" in outcome.results[0].message
+    assert "[MISSING_FIELD]" in outcome.results[0].reason
 
 
 def test_range_violation_fails_with_code(predictor):
     outcome = predictor.predict_many([valid_item(square_footage=-500)])
     assert outcome.fail_count == 1
-    assert "[OUT_OF_RANGE]" in outcome.results[0].message
+    assert "[OUT_OF_RANGE]" in outcome.results[0].reason
 
 
 def test_year_built_upper_boundary(predictor):
@@ -103,7 +103,7 @@ def test_year_built_upper_boundary(predictor):
     )
     assert bad.ok_count == 0
     assert bad.fail_count == 2
-    assert all("[OUT_OF_RANGE]" in r.message for r in bad.results)
+    assert all("[OUT_OF_RANGE]" in r.reason for r in bad.results)
 
 
 def test_year_built_lower_boundary(predictor):
@@ -112,7 +112,7 @@ def test_year_built_lower_boundary(predictor):
 
     bad = predictor.predict_many([valid_item(year_built=1899)])
     assert bad.fail_count == 1
-    assert "[OUT_OF_RANGE]" in bad.results[0].message
+    assert "[OUT_OF_RANGE]" in bad.results[0].reason
 
 
 def test_invalid_id_fails_with_code(predictor):
@@ -120,14 +120,14 @@ def test_invalid_id_fails_with_code(predictor):
         [valid_item(id=123), valid_item(id=True), valid_item(id=None)]
     )
     assert all(r.price == 0 for r in outcome.results)
-    assert all("[INVALID_ID] 'id' must be a string" in r.message for r in outcome.results)
+    assert all("[INVALID_ID] 'id' must be a string" in r.reason for r in outcome.results)
 
 
 def test_non_dict_item_fails(predictor):
     outcome = predictor.predict_many(["not an object"])
     result = outcome.results[0]
     assert result.price == 0.0
-    assert "[NOT_OBJECT]" in result.message
+    assert "[NOT_OBJECT]" in result.reason
 
 
 def test_partial_batch(predictor):
