@@ -19,7 +19,7 @@ def _echo_id(item: Any) -> str:
 
 
 def _format_pydantic_errors(exc: ValidationError) -> str:
-    """Turn a ValidationError into a single human-readable message."""
+    """Turn a ValidationError into a single human-readable reason."""
     parts = []
     for err in exc.errors():
         loc = ".".join(str(p) for p in err["loc"])
@@ -39,7 +39,7 @@ class PredictionOutcome:
 
     @property
     def ok_count(self) -> int:
-        return sum(1 for r in self.results if r.message == "")
+        return sum(1 for r in self.results if r.reason == "")
 
     @property
     def fail_count(self) -> int:
@@ -58,7 +58,7 @@ class Predictor:
         """Validate each item and predict prices for the valid ones.
 
         Results are returned in input order; failed items get ``price = 0``
-        and a reason in ``message``.
+        and a reason in ``reason``.
         """
         infos: list[tuple[int, HouseInfo]] = []
         results: list[HousePrice | None] = [None] * len(items)
@@ -83,7 +83,7 @@ class Predictor:
                     index=index,
                     id=info.id,
                     price=round(float(price) / 1000) * 1000,  # nearest 1000, int
-                    message="",
+                    reason="",
                 )
 
         return PredictionOutcome(results=[r for r in results if r is not None])
@@ -97,11 +97,11 @@ class Predictor:
                 index=index,
                 id="",
                 price=0,
-                message=reason(ErrorCode.NOT_OBJECT, "item must be a JSON object"),
+                reason=reason(ErrorCode.NOT_OBJECT, "item must be a JSON object"),
             )
 
         problems: list[str] = []
-        # Missing / wrong-type checks with friendly messages; Pydantic
+        # Missing / wrong-type checks with friendly reasons; Pydantic
         # below enforces the numeric range constraints.
         for name in FEATURE_ORDER:
             value = item.get(name)
@@ -122,7 +122,7 @@ class Predictor:
                 index=index,
                 id=_echo_id(item.get("id")),
                 price=0,
-                message="; ".join(problems),
+                reason="; ".join(problems),
             )
 
         try:
@@ -132,6 +132,6 @@ class Predictor:
                 index=index,
                 id=_echo_id(item.get("id")),
                 price=0,
-                message=reason(ErrorCode.OUT_OF_RANGE, _format_pydantic_errors(exc)),
+                reason=reason(ErrorCode.OUT_OF_RANGE, _format_pydantic_errors(exc)),
             )
         return info, None

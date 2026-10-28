@@ -24,7 +24,12 @@ router = APIRouter(tags=["prediction"])
 def predict(
     request: Request,
     payload: list[Any] = Body(
-        description="JSON array of HouseInfo objects. Invalid items get price 0 and a reason in message.",
+        description="JSON array of HouseInfo objects. Invalid items get price 0 and a reason explaining why.",
+        # The endpoint validates items individually (not via a Pydantic body
+        # model), so FastAPI never discovers HouseInfo from the annotation.
+        # Point the OpenAPI schema at the component registered by
+        # custom_openapi() in app/main.py.
+        json_schema_extra={"items": {"$ref": "#/components/schemas/HouseInfo"}},
     ),
 ) -> JSONResponse:
     """Predict prices for an array of houses.

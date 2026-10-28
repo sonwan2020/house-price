@@ -82,7 +82,7 @@ class HousePrice(BaseModel):
     price: int = Field(
         description="Predicted price rounded to the nearest 1000, or 0 when the item could not be predicted."
     )
-    message: str = Field(
+    reason: str = Field(
         default="",
         description="Empty on success; on failure the reason why price is 0.",
     )

@@ -4,7 +4,7 @@ from enum import Enum
 
 
 class ErrorCode(str, Enum):
-    """Machine-readable codes embedded in ``HousePrice.message``."""
+    """Machine-readable codes embedded in ``HousePrice.reason``."""
 
     NOT_OBJECT = "NOT_OBJECT"
     MISSING_FIELD = "MISSING_FIELD"
@@ -15,5 +15,5 @@ class ErrorCode(str, Enum):
 
 
 def reason(code: ErrorCode, detail: str) -> str:
-    """Format a per-item failure message, e.g. ``[MISSING_FIELD] 'lot_size' is required``."""
+    """Format a per-item failure reason, e.g. ``[MISSING_FIELD] 'lot_size' is required``."""
     return f"[{code.value}] {detail}"

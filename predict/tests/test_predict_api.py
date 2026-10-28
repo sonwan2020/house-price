@@ -62,7 +62,7 @@ def test_predict_all_ok_returns_200(client):
     assert predicts[1]["id"] == "house-2"
     assert all(r["price"] > 0 for r in predicts)
     assert all(isinstance(r["price"], int) for r in predicts)
-    assert all(r["message"] == "" for r in predicts)
+    assert all(r["reason"] == "" for r in predicts)
 
 
 def test_predict_price_is_rounded_to_1000(client):
@@ -82,8 +82,8 @@ def test_predict_all_failed_returns_400(client):
     predicts = body["predicts"]
     assert len(predicts) == 2
     assert all(r["price"] == 0 for r in predicts)
-    assert "[MISSING_FIELD]" in predicts[0]["message"]
-    assert "[INVALID_TYPE]" in predicts[1]["message"]
+    assert "[MISSING_FIELD]" in predicts[0]["reason"]
+    assert "[INVALID_TYPE]" in predicts[1]["reason"]
 
 
 def test_predict_partial_returns_207(client):
@@ -93,8 +93,8 @@ def test_predict_partial_returns_207(client):
     body = response.json()
     assert body["summary"] == {"total": 2, "succeed": 1, "failed": 1}
     predicts = body["predicts"]
-    assert predicts[0]["price"] > 0 and predicts[0]["message"] == ""
-    assert predicts[1]["price"] == 0 and predicts[1]["message"] != ""
+    assert predicts[0]["price"] > 0 and predicts[0]["reason"] == ""
+    assert predicts[1]["price"] == 0 and predicts[1]["reason"] != ""
 
 
 def test_predict_single_item(client):
@@ -122,7 +122,7 @@ def test_id_must_be_a_string(client):
     body = response.json()
     assert body["predicts"][0]["price"] == 0
     assert body["predicts"][0]["id"] == ""
-    assert "[INVALID_ID] 'id' must be a string" in body["predicts"][0]["message"]
+    assert "[INVALID_ID] 'id' must be a string" in body["predicts"][0]["reason"]
 
 
 def test_predict_wrong_type_is_per_item_error(client):
@@ -130,7 +130,7 @@ def test_predict_wrong_type_is_per_item_error(client):
     assert response.status_code == 400
     body = response.json()
     assert body["predicts"][0]["price"] == 0
-    assert "[INVALID_TYPE] 'bedrooms' must be a number" in body["predicts"][0]["message"]
+    assert "[INVALID_TYPE] 'bedrooms' must be a number" in body["predicts"][0]["reason"]
 
 
 def test_predict_range_violation_is_per_item_error(client):
@@ -140,7 +140,35 @@ def test_predict_range_violation_is_per_item_error(client):
     assert response.status_code == 207
     body = response.json()
     assert body["predicts"][1]["price"] == 0
-    assert "[OUT_OF_RANGE]" in body["predicts"][1]["message"]
+    assert "[OUT_OF_RANGE]" in body["predicts"][1]["reason"]
+
+
+def test_openapi_documents_house_info(client):
+    """The OpenAPI spec must reference HouseInfo from components for /predict."""
+    spec = client.get("/openapi.json").json()
+    schema = spec["paths"]["/api/v1/predict"]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"]
+    assert schema["items"] == {"$ref": "#/components/schemas/HouseInfo"}
+    items = spec["components"]["schemas"]["HouseInfo"]
+    assert items["type"] == "object"
+    assert items["title"] == "HouseInfo"
+    assert set(items["required"]) == {
+        "square_footage",
+        "bedrooms",
+        "bathrooms",
+        "year_built",
+        "lot_size",
+        "distance_to_city_center",
+        "school_rating",
+    }
+    for name in items["required"]:
+        field = items["properties"][name]
+        assert field["description"], f"{name} schema lacks a description"
+    assert items["properties"]["square_footage"]["type"] == "number"
+    assert items["properties"]["bedrooms"]["type"] == "integer"
+    assert items["properties"]["year_built"]["minimum"] == 1900
+    assert items["properties"]["id"]["type"] == "string"
 
 
 def test_year_built_upper_boundary(client):
@@ -164,4 +192,4 @@ def test_year_built_upper_boundary(client):
     assert body["summary"] == {"total": 2, "succeed": 1, "failed": 1}
     assert body["predicts"][0]["price"] > 0
     assert body["predicts"][1]["price"] == 0
-    assert "[OUT_OF_RANGE]" in body["predicts"][1]["message"]
+    assert "[OUT_OF_RANGE]" in body["predicts"][1]["reason"]
