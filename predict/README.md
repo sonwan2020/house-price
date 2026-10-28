@@ -27,9 +27,10 @@ predict/
 │   └── models/                  # trained artifacts (generated, not code)
 │       ├── house_price_model.joblib
 │       └── model_metrics.json
-├── data/                        # raw training CSVs (source for scripts/train.py)
+├── data/                        # raw training and test CSVs
 ├── scripts/
-│   └── train.py                 # trains the model, outputs app/models/*
+│   ├── train.py                 # trains and saves app/models/*
+│   └── test.py                  # predicts rows from a test CSV
 ├── tests/
 │   ├── test_predict_api.py      # HTTP contract tests
 │   └── test_predictor.py        # business logic tests (no server needed)
@@ -70,6 +71,19 @@ The host port is configurable via `API_PORT` in the repo root `.env`
 HEALTHCHECK against `/api/v1/health`, and binds `0.0.0.0:8000` inside
 the container.
 
+On a fresh clone (the artifacts are gitignored) the image build trains the
+model automatically — no manual step needed. The build also retrains when
+`scripts/train.py` or any CSV in `data/` is newer than the artifact
+(Makefile-style freshness check). To retrain explicitly after changing the
+training data:
+
+```bash
+docker compose run --rm --user root \
+  -v ./predict/app/models:/app/app/models \
+  api python scripts/train.py
+docker compose up -d --build   # bake the new artifacts into the image
+```
+
 ### Plain Docker
 
 ```bash
@@ -86,11 +100,22 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 # 2. (optional) retrain the model -> app/models/
 .venv/bin/python scripts/train.py
 
-# 3. run the server (honors .env for host/port)
+# Override the input CSV and/or output artifact paths
+.venv/bin/python scripts/train.py \
+  --train-csv "data/House Price Dataset.csv" \
+  --model-file app/models/house_price_model.joblib \
+  --metrics-file app/models/model_metrics.json
+
+# 3. load the saved model and print test predictions as a table
+.venv/bin/python scripts/test.py \
+  --test-csv "data/Test Data For Prediction.csv" \
+  --model-file app/models/house_price_model.joblib
+
+# 4. run the server (honors .env for host/port)
 .venv/bin/python -m app.main
 # or: .venv/bin/python -m uvicorn app.main:app --reload
 
-# 4. run the tests
+# 5. run the tests
 .venv/bin/python -m pytest
 ```
 
