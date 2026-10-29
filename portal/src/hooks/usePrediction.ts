@@ -12,13 +12,16 @@ export type PredictionStatus = "idle" | "loading" | "success" | "error";
  * The backend answers 200 (all ok), 207 (some failed) and 400 (all
  * failed) with the same body shape; per-item failures carry a `reason`,
  * so any response with `predicts` counts as a successful round-trip.
+ *
+ * `predict` resolves with the parsed response on success and null on
+ * failure, so callers can react to the outcome (e.g. save estimates).
  */
 export function usePrediction() {
   const [status, setStatus] = useState<PredictionStatus>("idle");
   const [response, setResponse] = useState<PredictResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const predict = useCallback(async (items: HouseInfo[]) => {
+  const predict = useCallback(async (items: HouseInfo[]): Promise<PredictResponse | null> => {
     setStatus("loading");
     setError(null);
     try {
@@ -37,6 +40,7 @@ export function usePrediction() {
       }
       setResponse(data as PredictResponse);
       setStatus("success");
+      return data as PredictResponse;
     } catch (err) {
       setError(
         err instanceof Error
@@ -44,6 +48,7 @@ export function usePrediction() {
           : "Something went wrong while contacting the prediction service.",
       );
       setStatus("error");
+      return null;
     }
   }, []);
 

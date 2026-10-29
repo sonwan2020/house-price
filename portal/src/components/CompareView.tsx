@@ -2,22 +2,31 @@
 
 import { useCompareSelection } from "@/hooks/useCompareSelection";
 import { useHistory } from "@/hooks/useHistory";
-import { formatDateTime, formatNumber, formatPrice } from "@/lib/format";
+import { formatNumber, formatPrice } from "@/lib/format";
 import type { HistoryEntry } from "@/lib/history";
 import EmptyState from "./EmptyState";
 import PriceBarChart from "./PriceBarChart";
 
-/** Rows of the side-by-side table; the first row is emphasised. */
-const ROWS: { key: string; label: string; render: (entry: HistoryEntry) => string }[] = [
-  { key: "price", label: "Estimated price", render: (e) => formatPrice(e.price) },
-  { key: "created", label: "Estimated at", render: (e) => formatDateTime(e.createdAt) },
-  { key: "square_footage", label: "Square footage (sq ft)", render: (e) => formatNumber(e.features.square_footage) },
-  { key: "bedrooms", label: "Bedrooms", render: (e) => String(e.features.bedrooms) },
-  { key: "bathrooms", label: "Bathrooms", render: (e) => formatNumber(e.features.bathrooms, 1) },
-  { key: "year_built", label: "Year built", render: (e) => String(e.features.year_built) },
-  { key: "lot_size", label: "Lot size (sq ft)", render: (e) => formatNumber(e.features.lot_size) },
-  { key: "distance_to_city_center", label: "Distance to city centre (miles)", render: (e) => formatNumber(e.features.distance_to_city_center, 1) },
-  { key: "school_rating", label: "School rating", render: (e) => formatNumber(e.features.school_rating, 1) },
+/**
+ * Rows of the side-by-side table; the first row is emphasised. `best` says
+ * which direction wins ("max" = highest is best, "min" = lowest is best) so
+ * the winning cell(s) can be highlighted.
+ */
+const ROWS: {
+  key: string;
+  label: string;
+  value: (entry: HistoryEntry) => number;
+  best: "max" | "min";
+  render: (entry: HistoryEntry) => string;
+}[] = [
+  { key: "price", label: "Estimated price", value: (e) => e.price, best: "max", render: (e) => formatPrice(e.price) },
+  { key: "square_footage", label: "Square footage (sq ft)", value: (e) => e.features.square_footage, best: "max", render: (e) => formatNumber(e.features.square_footage) },
+  { key: "bedrooms", label: "Bedrooms", value: (e) => e.features.bedrooms, best: "max", render: (e) => String(e.features.bedrooms) },
+  { key: "bathrooms", label: "Bathrooms", value: (e) => e.features.bathrooms, best: "max", render: (e) => formatNumber(e.features.bathrooms, 1) },
+  { key: "year_built", label: "Year built", value: (e) => e.features.year_built, best: "max", render: (e) => String(e.features.year_built) },
+  { key: "lot_size", label: "Lot size (sq ft)", value: (e) => e.features.lot_size, best: "max", render: (e) => formatNumber(e.features.lot_size) },
+  { key: "distance_to_city_center", label: "Distance to city centre (miles)", value: (e) => e.features.distance_to_city_center, best: "min", render: (e) => formatNumber(e.features.distance_to_city_center, 1) },
+  { key: "school_rating", label: "School rating", value: (e) => e.features.school_rating, best: "max", render: (e) => formatNumber(e.features.school_rating, 1) },
 ];
 
 /**
@@ -83,7 +92,10 @@ export default function CompareView() {
           </div>
 
           <div className="rounded-lg border border-hairline bg-surface p-5">
-            <h2 className="text-sm font-medium text-ink-secondary">Property details</h2>
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="text-sm font-medium text-ink-secondary">Property details</h2>
+              <p className="text-xs text-ink-muted">Best value in each row shown in bold</p>
+            </div>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[560px] border-collapse text-sm">
                 <thead>
@@ -106,23 +118,34 @@ export default function CompareView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ROWS.map((row, rowIndex) => (
-                    <tr key={row.key} className="border-b border-hairline last:border-0">
-                      <th scope="row" className="py-2 pr-4 text-left font-medium text-ink-secondary">
-                        {row.label}
-                      </th>
-                      {chosen.map((entry) => (
-                        <td
-                          key={entry.id}
-                          className={`py-2 pr-4 tabular-nums ${
-                            rowIndex === 0 ? "text-base font-semibold text-ink" : "text-ink-secondary"
-                          }`}
-                        >
-                          {row.render(entry)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {ROWS.map((row, rowIndex) => {
+                    const values = chosen.map((entry) => row.value(entry));
+                    const bestValue = row.best === "min" ? Math.min(...values) : Math.max(...values);
+                    return (
+                      <tr key={row.key} className="border-b border-hairline last:border-0">
+                        <th scope="row" className="py-2 pr-4 text-left font-medium text-ink-secondary">
+                          {row.label}
+                        </th>
+                        {chosen.map((entry) => {
+                          const isBest = row.value(entry) === bestValue;
+                          return (
+                            <td
+                              key={entry.id}
+                              className={`py-2 pr-4 tabular-nums ${rowIndex === 0 ? "text-base" : ""} ${
+                                isBest
+                                  ? "font-bold text-ink"
+                                  : rowIndex === 0
+                                    ? "font-medium text-ink"
+                                    : "text-ink-secondary"
+                              }`}
+                            >
+                              {row.render(entry)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

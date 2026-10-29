@@ -1,20 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useCompareSelection } from "@/hooks/useCompareSelection";
+import { MAX_COMPARE, useCompareSelection } from "@/hooks/useCompareSelection";
 import { useHistory } from "@/hooks/useHistory";
 import { formatDateTime, formatNumber, formatPrice } from "@/lib/format";
-import type { HistoryEntry } from "@/lib/history";
+import type { HouseFeatures } from "@/lib/types";
 import EmptyState from "./EmptyState";
 
-function featureSummary(entry: HistoryEntry): string {
-  const f = entry.features;
-  return (
-    `${formatNumber(f.square_footage)} sq ft · ${f.bedrooms} bd · ` +
-    `${formatNumber(f.bathrooms, 1)} ba · built ${f.year_built} · ` +
-    `${formatNumber(f.distance_to_city_center, 1)} mi from centre`
-  );
-}
+/** Feature columns of the table, formatted the same way as the compare table. */
+const FEATURE_COLUMNS: {
+  key: keyof HouseFeatures;
+  label: string;
+  render: (f: HouseFeatures) => string;
+}[] = [
+  { key: "square_footage", label: "Square footage (sq ft)", render: (f) => formatNumber(f.square_footage) },
+  { key: "bedrooms", label: "Bedrooms", render: (f) => String(f.bedrooms) },
+  { key: "bathrooms", label: "Bathrooms", render: (f) => formatNumber(f.bathrooms, 1) },
+  { key: "year_built", label: "Year built", render: (f) => String(f.year_built) },
+  { key: "lot_size", label: "Lot size (sq ft)", render: (f) => formatNumber(f.lot_size) },
+  { key: "distance_to_city_center", label: "Distance to city centre (miles)", render: (f) => formatNumber(f.distance_to_city_center, 1) },
+  { key: "school_rating", label: "School rating", render: (f) => formatNumber(f.school_rating, 1) },
+];
 
 /** Previous estimates, kept in the browser's localStorage. */
 export default function HistoryView() {
@@ -28,7 +34,7 @@ export default function HistoryView() {
         <div className="mt-6">
           <EmptyState
             title="No estimates yet"
-            body="Run an estimate and save it — it will appear here so you can review it later or compare it with other properties."
+            body="Run an estimate — it is saved here automatically so you can review it later or compare it with other properties."
             href="/"
             linkLabel="Estimate a property"
           />
@@ -38,6 +44,7 @@ export default function HistoryView() {
   }
 
   const canCompare = compare.selected.length >= 2;
+  const atLimit = compare.selected.length >= MAX_COMPARE;
 
   return (
     <section>
@@ -69,50 +76,81 @@ export default function HistoryView() {
         </p>
       )}
 
-      <ul className="mt-6 space-y-3">
-        {entries.map((entry) => {
-          const isSelected = compare.selected.includes(entry.id);
-          return (
-            <li
-              key={entry.id}
-              className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border border-hairline bg-surface p-4"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                  <h2 className="font-medium text-ink">{entry.label}</h2>
-                  <span className="text-xs text-ink-muted">
-                    {formatDateTime(entry.createdAt)}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-ink-secondary">{featureSummary(entry)}</p>
-              </div>
-              <p className="text-xl font-semibold tabular-nums text-ink">
-                {formatPrice(entry.price)}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => compare.toggle(entry.id)}
-                  aria-pressed={isSelected}
-                  className={`px-3 py-1.5 text-xs ${
-                    isSelected ? "btn-primary" : "btn-secondary"
-                  }`}
-                >
-                  {isSelected ? "✓ In comparison" : "+ Compare"}
-                </button>
-                <button
-                  onClick={() => {
-                    remove(entry.id);
-                    compare.remove(entry.id);
-                  }}
-                  className="btn-secondary px-3 py-1.5 text-xs hover:border-critical hover:text-critical"
-                >
-                  Delete
-                </button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {atLimit && (
+        <p className="mt-3 text-sm text-ink-muted">
+          Comparison is limited to {MAX_COMPARE} properties — deselect one to add another.
+        </p>
+      )}
+
+      <div className="mt-6 rounded-lg border border-hairline bg-surface p-5">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-hairline text-left align-bottom">
+                <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Property</th>
+                {FEATURE_COLUMNS.map((col) => (
+                  <th key={col.key} className="py-2 pr-4 text-xs font-medium text-ink-muted">
+                    {col.label}
+                  </th>
+                ))}
+                <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Estimate price</th>
+                <th className="py-2 text-right text-xs font-medium text-ink-muted">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => {
+                const isSelected = compare.selected.includes(entry.id);
+                return (
+                  <tr key={entry.id} className="border-b border-hairline last:border-0">
+                    <td className="py-2 pr-4">
+                      <span className="font-medium text-ink">{entry.label}</span>
+                      <span className="block text-xs text-ink-muted">
+                        {formatDateTime(entry.createdAt)}
+                      </span>
+                    </td>
+                    {FEATURE_COLUMNS.map((col) => (
+                      <td key={col.key} className="py-2 pr-4 tabular-nums text-ink-secondary">
+                        {col.render(entry.features)}
+                      </td>
+                    ))}
+                    <td className="py-2 pr-4 text-sm font-semibold text-good-ink">
+                      {formatPrice(entry.price)}
+                    </td>
+                    <td className="py-2 text-right">
+                      <div className="flex shrink-0 items-center justify-end gap-2">
+                        <button
+                          onClick={() => compare.toggle(entry.id)}
+                          aria-pressed={isSelected}
+                          disabled={atLimit && !isSelected}
+                          title={
+                            atLimit && !isSelected
+                              ? `Comparison is limited to ${MAX_COMPARE} properties`
+                              : undefined
+                          }
+                          className={`whitespace-nowrap px-3 py-1.5 text-xs ${
+                            isSelected ? "btn-primary" : "btn-secondary"
+                          } ${atLimit && !isSelected ? "opacity-50" : ""}`}
+                        >
+                          {isSelected ? "✓ In comparison" : "+ Compare"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            remove(entry.id);
+                            compare.remove(entry.id);
+                          }}
+                          className="btn-secondary whitespace-nowrap px-3 py-1.5 text-xs"
+                        >
+                          ✕ Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </section>
   );
 }
