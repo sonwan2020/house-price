@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: market-api
+  jackson:
+    # JSON keys use snake_case to match the Task 1 vocabulary
+    # (square_footage, year_built, ...); null fields are omitted.
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+
+market:
+  # CSV loaded at startup (fail fast when missing) and re-readable via
+  # POST /api/market/reload, e.g. after the dataset volume changes.
+  data-file: ${DATA_FILE:/data/House Price Dataset.csv}
+  # The Task 1 ML container; server-side calls only, same as the portal.
+  python-api-url: ${PYTHON_API_URL:http://api:8000}
+  # Cache TTLs for filtered aggregates and ML-backed endpoints (b.iv).
+  aggregates-cache-ttl-seconds: ${AGGREGATES_CACHE_TTL_SECONDS:300}
+  ml-cache-ttl-seconds: ${ML_CACHE_TTL_SECONDS:60}

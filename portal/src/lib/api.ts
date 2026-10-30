@@ -18,6 +18,13 @@ import type { ModelInfo } from "./types";
 export const PYTHON_API_URL = process.env.PYTHON_API_URL ?? "http://127.0.0.1:8000";
 
 /**
+ * Base URL of the Java market analysis API.
+ * Docker Compose sets http://market-api:8080 (internal network); local
+ * dev defaults to the service running on the host.
+ */
+export const MARKET_API_URL = process.env.MARKET_API_URL ?? "http://127.0.0.1:8080";
+
+/**
  * Fetch model info for server components. Model info changes only when a
  * new model is trained, so revalidate every minute instead of no-store.
  */

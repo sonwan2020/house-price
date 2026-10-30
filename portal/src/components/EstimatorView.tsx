@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useHistory } from "@/hooks/useHistory";
+import { Fragment, useState, type FormEvent } from "react";
 import { usePrediction } from "@/hooks/usePrediction";
+import { useHistory } from "@/hooks/useHistory";
 import { newId } from "@/lib/history";
-import type { HouseInfo } from "@/lib/types";
+import { formatPrice } from "@/lib/format";
+import type { HouseInfo, HousePrice } from "@/lib/types";
 import {
   FIELD_DEFS,
   type FieldName,
@@ -13,14 +14,14 @@ import {
   toHouseFeatures,
   validateFeatures,
 } from "@/lib/validation";
-import ResultsPanel from "./ResultsPanel";
 
 const MAX_PROPERTIES = 10;
 
-/** One property in the batch form: a stable client key, values and errors. */
+/** One property column in the grid form: a stable client key, values and errors. */
 interface PropertyForm {
   key: string;
   label: string;
+  labelError?: string;
   values: FeatureValues;
   errors: ValidationErrors;
 }
@@ -35,19 +36,27 @@ function createForm(key?: string): PropertyForm {
   return { key: key ?? newId(), label: "", values: emptyValues(), errors: {} };
 }
 
+/** Field-input classes when the value failed validation. */
+const ERROR_INPUT = "border-critical focus:border-critical focus:ring-critical/25";
+
 /**
- * The estimator: a form for one or more properties (batch), client-side
- * validation mirroring the backend's rules, and the results below.
+ * The estimator, laid out as a grid: field labels down the left column and
+ * one input column per property to the right (add up to 10). An Estimate
+ * price row at the bottom fills in green after a successful round-trip.
+ * Successful estimates are saved to history automatically.
+ * Client-side validation mirrors the backend's rules; property names are
+ * optional but must be unique on the page.
  */
 export default function EstimatorView() {
+  const { status, response, error, predict } = usePrediction();
   const history = useHistory();
-  const { status, response, error, predict, reset } = usePrediction();
 
-  // The initial form uses a deterministic key so the server-rendered HTML
-  // and the client hydration agree; forms added later are client-only.
+  // The initial column uses a deterministic key so the server-rendered HTML
+  // and the client hydration agree; columns added later are client-only.
   const [forms, setForms] = useState<PropertyForm[]>([createForm("property-0")]);
-  const [submittedItems, setSubmittedItems] = useState<HouseInfo[] | null>(null);
-  const [savedIndexes, setSavedIndexes] = useState<Set<number>>(new Set());
+  // Column keys as submitted, so each price stays pinned to its column even
+  // if columns are added or removed afterwards.
+  const [pricedKeys, setPricedKeys] = useState<string[]>([]);
 
   const addForm = () =>
     setForms((prev) => (prev.length < MAX_PROPERTIES ? [...prev, createForm()] : prev));
@@ -80,11 +89,37 @@ export default function EstimatorView() {
     );
   };
 
+  /** Names are optional, but two properties on the page cannot share one. */
+  const nameError = (key: string, label: string): string | undefined => {
+    const name = label.trim();
+    if (!name) return undefined;
+    const duplicate = forms.some(
+      (f) => f.key !== key && f.label.trim().toLowerCase() === name.toLowerCase(),
+    );
+    return duplicate ? "Names must be unique." : undefined;
+  };
+
+  const setLabel = (key: string, label: string) => {
+    setForms((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, label, labelError: undefined } : f)),
+    );
+  };
+
+  const validateLabel = (key: string) => {
+    setForms((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, labelError: nameError(key, f.label) } : f)),
+    );
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    const validated = forms.map((f) => ({ ...f, errors: validateFeatures(f.values) }));
+    const validated = forms.map((f) => ({
+      ...f,
+      errors: validateFeatures(f.values),
+      labelError: nameError(f.key, f.label),
+    }));
     setForms(validated);
-    if (validated.some((f) => Object.keys(f.errors).length > 0)) return;
+    if (validated.some((f) => Object.keys(f.errors).length > 0 || f.labelError)) return;
 
     const items: HouseInfo[] = validated.map((f) => {
       const info: HouseInfo = toHouseFeatures(f.values);
@@ -92,31 +127,37 @@ export default function EstimatorView() {
       if (label) info.id = label;
       return info;
     });
-    setSubmittedItems(items);
-    setSavedIndexes(new Set());
-    await predict(items);
+    setPricedKeys(validated.map((f) => f.key));
+    const data = await predict(items);
+
+    // Save each successful estimate to history automatically; failed
+    // items (price <= 0, with a reason) are not saved.
+    if (data) {
+      validated.forEach((f, index) => {
+        const result = data.predicts[index];
+        if (!result || result.price <= 0) return;
+        const label = f.label.trim() || `Property ${index + 1}`;
+        history.add(toHouseFeatures(f.values), result.price, label);
+      });
+    }
   };
 
-  const saveResult = (index: number) => {
-    if (!response || !submittedItems) return;
-    const result = response.predicts[index];
-    if (!result || result.price <= 0) return;
-    const item = submittedItems[index];
-    history.add(item, result.price, item.id?.trim() || `Property ${index + 1}`);
-    setSavedIndexes((prev) => new Set(prev).add(index));
+  /** The result pinned to a column, if this column was part of the last submit. */
+  const priceFor = (key: string): HousePrice | undefined => {
+    const index = pricedKeys.indexOf(key);
+    if (index < 0 || !response) return undefined;
+    return response.predicts[index];
   };
 
-  const saveAll = () => {
-    if (!response) return;
-    response.predicts.forEach((result) => {
-      if (result.price > 0 && !savedIndexes.has(result.index)) saveResult(result.index);
-    });
-  };
-
-  const resetAll = () => {
-    reset();
-    setSubmittedItems(null);
-  };
+  // Grid placement: row 1 holds the Remove controls (when shown), then the
+  // Name row, one row per feature, then the Estimate price row. The label
+  // column is rendered first and each property's cells are grouped by
+  // column, so the DOM — and therefore keyboard tab order — runs
+  // top-to-bottom per property column.
+  const firstRow = forms.length > 1 ? 2 : 1;
+  const fieldRow = (i: number) => firstRow + 1 + i;
+  const priceRow = firstRow + 1 + FIELD_DEFS.length;
+  const cell = (column: number, row: number) => ({ gridColumn: column, gridRow: row });
 
   return (
     <div className="space-y-6">
@@ -136,94 +177,152 @@ export default function EstimatorView() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
-          {forms.map((form, index) => (
-            <div key={form.key} className="rounded-lg border border-hairline bg-page p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-ink">Property {index + 1}</p>
-                {forms.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeForm(form.key)}
-                    className="text-xs text-ink-muted underline transition-colors hover:text-critical"
-                  >
-                    Remove
-                  </button>
-                )}
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="mt-4 overflow-x-auto pb-1">
+            <div
+              className="grid items-start gap-x-4 gap-y-4"
+              style={{ gridTemplateColumns: `14rem repeat(${forms.length}, 11rem)` }}
+            >
+              {/* Left label column (not focusable, so it stays out of tab order). */}
+              <div className="pt-2 text-sm font-medium text-ink" style={cell(1, firstRow)}>
+                Name <span className="text-ink-muted">(optional)</span>
+              </div>
+              {FIELD_DEFS.map((field, i) => (
+                <div
+                  key={field.name}
+                  className="pt-2 text-sm font-medium text-ink"
+                  style={cell(1, fieldRow(i))}
+                >
+                  {field.label}{" "}
+                  {field.unit && <span className="text-ink-muted">({field.unit})</span>}
+                </div>
+              ))}
+              <div className="pt-2 text-sm font-medium text-ink" style={cell(1, priceRow)}>
+                Estimate price
               </div>
 
-              <div className="mt-3 max-w-sm">
-                <label htmlFor={`${form.key}-label`} className="block text-sm font-medium text-ink">
-                  Name <span className="text-ink-muted">(optional)</span>
-                </label>
-                <input
-                  id={`${form.key}-label`}
-                  type="text"
-                  value={form.label}
-                  maxLength={40}
-                  placeholder={`Property ${index + 1}`}
-                  onChange={(e) =>
-                    setForms((prev) =>
-                      prev.map((f) => (f.key === form.key ? { ...f, label: e.target.value } : f)),
-                    )
-                  }
-                  className="field-input mt-1.5"
-                />
-              </div>
+              {/* One column per property; DOM order = tab order. */}
+              {forms.map((form, index) => {
+                const column = index + 2; // column 1 is the labels
+                const result = priceFor(form.key);
+                const ok = result ? result.price > 0 : false;
+                return (
+                  <Fragment key={form.key}>
+                    {forms.length > 1 && (
+                      <div className="flex justify-end" style={cell(column, 1)}>
+                        <button
+                          type="button"
+                          onClick={() => removeForm(form.key)}
+                          aria-label={`Remove property ${index + 1}`}
+                          className="text-xs text-ink-muted underline transition-colors hover:text-critical"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
 
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {FIELD_DEFS.map((field) => (
-                  <div key={field.name}>
-                    <label
-                      htmlFor={`${form.key}-${field.name}`}
-                      className="block text-sm font-medium text-ink"
-                    >
-                      {field.label}{" "}
-                      {field.unit && <span className="text-ink-muted">({field.unit})</span>}
-                    </label>
-                    <div className="relative mt-1.5">
+                    <div className="min-w-0" style={cell(column, firstRow)}>
                       <input
-                        id={`${form.key}-${field.name}`}
-                        type="number"
-                        inputMode="decimal"
-                        step={field.step}
-                        min={field.min}
-                        max={field.max}
-                        value={form.values[field.name]}
-                        onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
-                        onBlur={() => validateField(form.key, field.name)}
-                        aria-invalid={Boolean(form.errors[field.name])}
-                        aria-describedby={
-                          form.errors[field.name] ? `${form.key}-${field.name}-error` : undefined
-                        }
-                        className={`field-input pr-16 ${
-                          form.errors[field.name]
-                            ? "border-critical focus:border-critical focus:ring-critical/25"
-                            : ""
-                        }`}
+                        id={`${form.key}-label`}
+                        type="text"
+                        value={form.label}
+                        maxLength={40}
+                        placeholder={`Property ${index + 1}`}
+                        onChange={(e) => setLabel(form.key, e.target.value)}
+                        onBlur={() => validateLabel(form.key)}
+                        aria-invalid={Boolean(form.labelError)}
+                        aria-describedby={form.labelError ? `${form.key}-label-error` : undefined}
+                        className={`field-input ${form.labelError ? ERROR_INPUT : ""}`}
                       />
-                      {field.unit && (
-                        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-ink-muted">
-                          {field.unit}
-                        </span>
+                      {form.labelError && (
+                        <p
+                          id={`${form.key}-label-error`}
+                          role="alert"
+                          className="mt-1 text-xs text-critical"
+                        >
+                          {form.labelError}
+                        </p>
                       )}
                     </div>
-                    {form.errors[field.name] && (
-                      <p
-                        id={`${form.key}-${field.name}-error`}
-                        role="alert"
-                        className="mt-1 text-xs text-critical"
-                      >
-                        {form.errors[field.name]}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
 
-          <div className="flex flex-wrap items-center gap-3">
+                    {FIELD_DEFS.map((field, fi) => (
+                      <div key={field.name} className="min-w-0" style={cell(column, fieldRow(fi))}>
+                        {field.select ? (
+                          <select
+                            id={`${form.key}-${field.name}`}
+                            value={form.values[field.name]}
+                            onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
+                            onBlur={() => validateField(form.key, field.name)}
+                            aria-label={`${field.label} for property ${index + 1}`}
+                            aria-invalid={Boolean(form.errors[field.name])}
+                            aria-describedby={
+                              form.errors[field.name] ? `${form.key}-${field.name}-error` : undefined
+                            }
+                            className={`field-input ${form.errors[field.name] ? ERROR_INPUT : ""}`}
+                          >
+                            <option value="">Select a year</option>
+                            {Array.from(
+                              { length: field.max - field.min + 1 },
+                              (_, i) => field.min + i,
+                            ).map((year) => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            id={`${form.key}-${field.name}`}
+                            type="number"
+                            inputMode="decimal"
+                            step={field.step}
+                            min={field.min}
+                            max={field.max}
+                            value={form.values[field.name]}
+                            onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
+                            onBlur={() => validateField(form.key, field.name)}
+                            aria-label={`${field.label} for property ${index + 1}`}
+                            aria-invalid={Boolean(form.errors[field.name])}
+                            aria-describedby={
+                              form.errors[field.name] ? `${form.key}-${field.name}-error` : undefined
+                            }
+                            className={`field-input ${
+                              form.errors[field.name] ? ERROR_INPUT : ""
+                            }`}
+                          />
+                        )}
+                        {form.errors[field.name] && (
+                          <p
+                            id={`${form.key}-${field.name}-error`}
+                            role="alert"
+                            className="mt-1 text-xs text-critical"
+                          >
+                            {form.errors[field.name]}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Estimate price: always visible, filled in green after Estimate. */}
+                    <div className="min-w-0 pt-2" style={cell(column, priceRow)} aria-live="polite">
+                      {ok && result ? (
+                        <p className="text-sm font-semibold text-good-ink">
+                          {formatPrice(result.price)}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-ink-muted">—</p>
+                      )}
+                      {result && !ok && result.reason && (
+                        <p className="mt-1 text-xs text-critical">{result.reason}</p>
+                      )}
+                    </div>
+                  </Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button type="submit" disabled={status === "loading"} className="btn-primary">
               {status === "loading" ? "Estimating…" : "Estimate"}
             </button>
@@ -242,17 +341,6 @@ export default function EstimatorView() {
           </p>
         )}
       </section>
-
-      {response && submittedItems && (
-        <ResultsPanel
-          response={response}
-          items={submittedItems}
-          savedIndexes={savedIndexes}
-          onSave={saveResult}
-          onSaveAll={saveAll}
-          onReset={resetAll}
-        />
-      )}
     </div>
   );
 }

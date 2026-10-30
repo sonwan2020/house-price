@@ -7,6 +7,8 @@ const LINKS = [
   { href: "/", label: "Estimate" },
   { href: "/history", label: "History" },
   { href: "/compare", label: "Compare" },
+  { href: "/market", label: "Market" },
+  { href: "/model", label: "Model" },
 ];
 
 /** Top navigation; client component only for active-link highlighting. */
