@@ -51,11 +51,14 @@ services:
     ports:
       - "${PORTAL_PORT:-3000}:3000"
     environment:
-      # The portal calls the API server-side over the internal network;
-      # the browser never talks to the FastAPI service directly.
+      # The portal calls the APIs server-side over the internal network;
+      # the browser never talks to the Python or Java services directly.
       PYTHON_API_URL: http://api:8000
+      MARKET_API_URL: http://market-api:8080
     depends_on:
       api:
+        condition: service_healthy
+      market-api:
         condition: service_healthy
     restart: unless-stopped
 

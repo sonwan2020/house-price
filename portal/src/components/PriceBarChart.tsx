@@ -57,7 +57,11 @@ function truncate(value: string, max: number): string {
 
 /** Recharts injects the tooltip props at render time; they are optional here
  * so the component can be mounted as `<ChartTooltip />`. */
-function ChartTooltip({ active, payload }: Partial<TooltipContentProps<number, string>>) {
+function ChartTooltip({
+  active,
+  payload,
+  metricLabel,
+}: Partial<TooltipContentProps<number, string>> & { metricLabel: string }) {
   const row = payload?.[0]?.payload as (ChartDatum & { color?: string }) | undefined;
   if (!active || !row) return null;
   return (
@@ -70,7 +74,7 @@ function ChartTooltip({ active, payload }: Partial<TooltipContentProps<number, s
         <span className="text-sm font-medium text-ink">{row.label}</span>
       </div>
       <p className="mt-1 text-sm text-ink-secondary">
-        Estimated price{" "}
+        {metricLabel}{" "}
         <span className="font-semibold tabular-nums text-ink">{formatPrice(row.value)}</span>
       </p>
     </div>
@@ -78,19 +82,26 @@ function ChartTooltip({ active, payload }: Partial<TooltipContentProps<number, s
 }
 
 /**
- * Bar chart of estimated prices. Mark specs follow the dataviz system:
+ * Bar chart of prices by entity. Mark specs follow the dataviz system:
  * thin bars (24px) with rounded data-ends, hairline grid, muted axes,
  * direct value labels at the tips, and a legend whenever more than one
  * entity is drawn (single-entity callers render a stat tile instead).
  */
-export default function PriceBarChart({ data }: { data: ChartDatum[] }) {
+export default function PriceBarChart({
+  data,
+  metricLabel = "Estimated price",
+}: {
+  data: ChartDatum[];
+  /** Name of the measured quantity, used in the tooltip and aria text. */
+  metricLabel?: string;
+}) {
   if (data.length === 0) return null;
 
   const colours = assignColours(data);
   const rows = data.map((d) => ({ ...d, color: colours.get(d.id) ?? CATEGORICAL[0] }));
   const maxValue = Math.max(...rows.map((r) => r.value));
   const domainMax = Math.ceil((maxValue * 1.15) / 1000) * 1000;
-  const aria = `Bar chart of estimated prices: ${rows
+  const aria = `Bar chart of ${metricLabel}: ${rows
     .map((r) => `${r.label} ${formatPrice(r.value)}`)
     .join("; ")}.`;
 
@@ -119,10 +130,13 @@ export default function PriceBarChart({ data }: { data: ChartDatum[] }) {
             tickFormatter={(value: number) => `$${formatCompact(value)}`}
             domain={[0, domainMax]}
           />
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(11, 11, 11, 0.04)" }} />
+          <Tooltip
+            content={<ChartTooltip metricLabel={metricLabel} />}
+            cursor={{ fill: "rgba(11, 11, 11, 0.04)" }}
+          />
           <Bar
             dataKey="value"
-            name="Estimated price"
+            name={metricLabel}
             barSize={24}
             radius={[4, 4, 0, 0]}
             isAnimationActive={false}

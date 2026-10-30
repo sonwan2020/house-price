@@ -1,8 +1,9 @@
 # Property Value Estimator — portal
 
 Next.js frontend for the house price prediction stack. Talks to the
-Python API in `../predict` **server-side only** — the browser never
-reaches the FastAPI service, so no CORS configuration is needed.
+Python API in `../predict` and the market analysis API in `../market`
+**server-side only** — the browser never reaches either backend directly,
+so no CORS configuration is needed.
 
 ## Features
 
@@ -18,6 +19,14 @@ reaches the FastAPI service, so no CORS configuration is needed.
   and clear actions.
 - **Comparison view** of selected history entries: price bar chart plus a
   side-by-side feature table.
+- **Market dashboard** (`/market`): segment filters (bedrooms, year built,
+  school rating, distance, price band) driving aggregate stat tiles, five
+  charts (price distribution histogram, average price by bedrooms / year /
+  school rating / distance), a server-sorted/paged dataset table and
+  CSV/PDF exports — all served by the Java market-api.
+- **What-if analysis** (`/market/what-if`): a baseline house plus per-scenario
+  feature changes, predicted in one batch by the Task 1 model; results show
+  the delta per scenario as a diverging chart and table.
 
 ## Project structure
 
@@ -35,15 +44,22 @@ portal/
 │   │   ├── not-found.tsx     # 404 page
 │   │   ├── history/page.tsx  # estimate history
 │   │   ├── compare/page.tsx  # side-by-side comparison
+│   │   ├── market/page.tsx   # market dashboard (App 2)
+│   │   ├── market/what-if/page.tsx  # what-if analysis (App 2)
 │   │   └── api/              # server-side proxy route handlers
 │   │       ├── predict/      #   POST → POST /api/v1/predict
 │   │       ├── model-info/   #   GET  → GET /api/v1/model-info (60s revalidate)
-│   │       └── health/       #   GET  → liveness probe (Docker HEALTHCHECK)
+│   │       ├── health/       #   GET  → liveness probe (Docker HEALTHCHECK)
+│   │       └── market/       #   App 2 proxies → the Java market-api
+│   │           ├── aggregates/  # GET  → GET /api/market/aggregates
+│   │           ├── properties/  # GET  → GET /api/market/properties
+│   │           ├── what-if/     # POST → POST /api/market/what-if
+│   │           └── export/      # GET  → GET /api/market/export.{csv,pdf}
 │   ├── components/           # server: ModelInfoPanel, ModelInfoCard, skeleton
 │   │                         # client: form, results, history, compare, chart, nav
 │   ├── hooks/                # usePrediction, useHistory, useCompareSelection
 │   └── lib/                  # types, validation rules, formatting, storage, api helpers
-├── .env.example              # PYTHON_API_URL (copy to .env.local)
+├── .env.example              # PYTHON_API_URL, MARKET_API_URL (copy to .env.local)
 └── public/
 ```
 
