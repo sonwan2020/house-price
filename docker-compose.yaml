@@ -58,3 +58,23 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+  market-api:
+    build:
+      context: ./market
+      dockerfile: Dockerfile
+    image: house-price-market-api:latest
+    container_name: house-price-market-api
+    ports:
+      - "${MARKET_PORT:-8080}:8080"
+    environment:
+      # The market service aggregates the dataset mounted below and calls
+      # the ML container for what-if predictions over the internal network.
+      PYTHON_API_URL: http://api:8000
+      DATA_FILE: /data/House Price Dataset.csv
+    volumes:
+      - ./predict/data:/data:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
