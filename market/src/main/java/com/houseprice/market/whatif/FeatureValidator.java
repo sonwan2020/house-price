@@ -61,8 +61,8 @@ public final class FeatureValidator {
       case "year_built" -> {
         if (value != Math.floor(value)) {
           errors.put(name, "must be a whole number.");
-        } else if (value < 1900 || value > MAX_YEAR_BUILT) {
-          errors.put(name, "must be between 1900 and " + MAX_YEAR_BUILT + ".");
+        } else if (value < 1950 || value > MAX_YEAR_BUILT) {
+          errors.put(name, "must be between 1950 and " + MAX_YEAR_BUILT + ".");
         }
       }
       case "lot_size" -> {

@@ -122,10 +122,10 @@ def test_year_built_upper_boundary(predictor):
 
 
 def test_year_built_lower_boundary(predictor):
-    ok = predictor.predict_many([valid_item(year_built=1900)])
+    ok = predictor.predict_many([valid_item(year_built=1950)])
     assert ok.ok_count == 1
 
-    bad = predictor.predict_many([valid_item(year_built=1899)])
+    bad = predictor.predict_many([valid_item(year_built=1949)])
     assert bad.fail_count == 1
     assert "[OUT_OF_RANGE]" in bad.results[0].reason
 

@@ -45,8 +45,8 @@ class HouseFeatures(BaseModel):
         le=20,
     )
     year_built: int = Field(
-        description=f"Year the house was built (integer, 1900 to {CURRENT_YEAR + 5}).",
-        ge=1900,
+        description=f"Year the house was built (integer, 1950 to {CURRENT_YEAR + 5}).",
+        ge=1950,
         le=CURRENT_YEAR + 5,
     )
     lot_size: float = Field(

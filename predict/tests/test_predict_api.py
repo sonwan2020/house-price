@@ -195,7 +195,7 @@ def test_openapi_documents_house_info(client):
         assert field["description"], f"{name} schema lacks a description"
     assert items["properties"]["square_footage"]["type"] == "number"
     assert items["properties"]["bedrooms"]["type"] == "integer"
-    assert items["properties"]["year_built"]["minimum"] == 1900
+    assert items["properties"]["year_built"]["minimum"] == 1950
     assert items["properties"]["id"]["type"] == "string"
 
 

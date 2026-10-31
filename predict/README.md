@@ -198,7 +198,7 @@ deployed, and clients don't change when the model does.
 
 Validation per item: all fields required, must be numbers, `bedrooms` /
 `year_built` must be integers, plus sanity ranges (positive footage/lot size,
-`year_built` 1900–current year + 5, `school_rating` 0–10, ...).
+`year_built` 1950–current year + 5, `school_rating` 0–10, ...).
 
 Status codes:
 

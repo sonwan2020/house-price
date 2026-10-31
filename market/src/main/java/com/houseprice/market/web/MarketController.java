@@ -77,6 +77,7 @@ public class MarketController {
   @GetMapping("/aggregates")
   @Cacheable(cacheNames = CacheConfig.AGGREGATES, key = "#filters.toCacheKey()")
   public Aggregates.Response aggregates(MarketFilters filters) {
+    filters.validate();
     return analysis.aggregates(filters);
   }
 
@@ -88,6 +89,7 @@ public class MarketController {
       @RequestParam(defaultValue = "asc") String sortDir,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size) {
+    filters.validate();
     return analysis.properties(filters, sortBy, sortDir, page, size);
   }
 
@@ -102,6 +104,7 @@ public class MarketController {
   @GetMapping("/export")
   public ResponseEntity<?> export(@RequestParam String type, MarketFilters filters) {
     requireExportType(type);
+    filters.validate();
     HttpHeaders headers = new HttpHeaders();
     if (type.equals("csv")) {
       List<House> rows = analysis.filtered(filters);

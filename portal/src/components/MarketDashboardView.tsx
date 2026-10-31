@@ -16,7 +16,7 @@ import PriceBarChart, { type ChartDatum } from "./PriceBarChart";
 import PriceHistogram from "./PriceHistogram";
 
 const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: CURRENT_YEAR + 5 - 1900 + 1 }, (_, i) => 1900 + i);
+const YEARS = Array.from({ length: CURRENT_YEAR + 5 - 1950 + 1 }, (_, i) => 1950 + i);
 const BEDROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 const SCHOOL_OPTIONS = [5, 6, 7, 8, 9];
 const DISTANCE_OPTIONS = [2, 4, 6, 8];
