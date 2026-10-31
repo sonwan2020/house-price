@@ -144,5 +144,5 @@ npm start
 
 Matches the API's Pydantic schema: `square_footage` > 0 ≤ 100,000;
 `bedrooms` integer 1–20; `bathrooms` > 0 ≤ 20 (half baths allowed);
-`year_built` integer 1900–current year + 5; `lot_size` > 0 ≤ 1,000,000;
+`year_built` integer 1950–current year + 5; `lot_size` > 0 ≤ 1,000,000;
 `distance_to_city_center` 0–1,000 miles; `school_rating` 0–10.

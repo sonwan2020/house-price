@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WhatIfExportRun } from "@/lib/what-if-history";
 
 export type ExportType = "pdf" | "csv";
@@ -25,13 +25,47 @@ export default function ExportDialog({ title, defaultName, runs, onClose }: Expo
   const [stem, setStem] = useState(defaultName);
   const [status, setStatus] = useState<"idle" | "downloading">("idle");
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
+  // Modal behaviour: move focus into the dialog on open (restoring it on
+  // close), trap Tab/Shift+Tab inside it, and close on Escape.
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    dialog?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      previouslyFocused?.focus();
+    };
   }, [onClose]);
 
   const fileName = `${stem}.${type}`;
@@ -77,10 +111,12 @@ export default function ExportDialog({ title, defaultName, runs, onClose }: Expo
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="export-dialog-title"
-        className="w-full max-w-sm rounded-lg border border-hairline bg-surface p-5 shadow-xl"
+        tabIndex={-1}
+        className="w-full max-w-sm rounded-lg border border-hairline bg-surface p-5 shadow-xl focus:outline-none"
         onClick={(event) => event.stopPropagation()}
       >
         <h2 id="export-dialog-title" className="text-base font-semibold text-ink">
