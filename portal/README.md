@@ -12,9 +12,10 @@ so no CORS configuration is needed.
 - **Client-side validation** mirroring the API's rules (required, numeric,
   whole-number, and range checks) with inline per-field error messages —
   invalid data never leaves the browser.
-- **Results** in tabular form and as a chart: a hero figure for a single
-  estimate, a bar chart for batches, plus summary chips (total / predicted
-  / failed) and per-item failure reasons.
+- **Results** in both tabular and visual form: each property's price fills
+  in the estimate grid, and a results panel below shows summary chips
+  (submitted / estimated / failed), a hero figure for a single estimate or
+  a bar chart for batches, and per-item failure reasons.
 - **History** of saved estimates (browser `localStorage`), with delete
   and clear actions.
 - **Comparison view** of selected history entries: price bar chart plus a
@@ -39,6 +40,7 @@ portal/
 │   ├── app/
 │   │   ├── layout.tsx        # root layout + nav (server component)
 │   │   ├── page.tsx          # home: RSC shell + Suspense around model info
+│   │   ├── loading.tsx       # route-level loading skeleton (all routes)
 │   │   ├── error.tsx         # route-segment error boundary (client)
 │   │   ├── global-error.tsx  # root-layout error boundary (client)
 │   │   ├── not-found.tsx     # 404 page
@@ -56,9 +58,9 @@ portal/
 │   │           ├── what-if/     # POST → POST /api/market/what-if
 │   │           └── export/      # GET  → GET /api/market/export.{csv,pdf}
 │   ├── components/           # server: ModelInfoPanel, ModelInfoCard, skeleton
-│   │                         # client: form, results, history, compare, chart, nav
+│   │                         # client: form + results, history, compare, charts, nav
 │   ├── hooks/                # usePrediction, useHistory, useCompareSelection
-│   └── lib/                  # types, validation rules, formatting, storage, api helpers
+│   └── lib/                  # types, validation, formatting, storage, api + market server helpers
 ├── .env.example              # PYTHON_API_URL, MARKET_API_URL (copy to .env.local)
 └── public/
 ```
@@ -66,26 +68,40 @@ portal/
 ## Architecture notes (Next.js requirements)
 
 - **App Router** throughout; pages under `src/app/`, using the convention
-  files (`page.tsx`, `layout.tsx`, `route.ts`, `error.tsx`,
+  files (`page.tsx`, `layout.tsx`, `route.ts`, `loading.tsx`, `error.tsx`,
   `global-error.tsx`, `not-found.tsx`).
+- **Loading and error states at the layout level**: a route-level
+  `loading.tsx` skeleton covers every route while server components render,
+  and `error.tsx`/`global-error.tsx` catch render errors with a retry.
 - **Server vs client components**: `page.tsx`, `layout.tsx`,
   `ModelInfoPanel`/`ModelInfoCard` are server components; the form, results,
-  history, compare views and chart are client components ("use client"),
+  history, compare views and charts are client components ("use client"),
   pushed as far down the tree as possible (Nav is client only for
   active-link highlighting).
 - **React Server Components for initial data loading**: `ModelInfoPanel`
   fetches `/api/v1/model-info` on the server and streams into the page
-  inside a Suspense boundary — the estimator form paints immediately and
-  the model tiles fill in when the API answers, with a skeleton fallback
-  and graceful degradation when the API is offline.
-- **Data fetching strategy**: all Python API calls go through Next.js route
-  handlers (proxy) — `cache: "no-store"` for predictions, `revalidate: 60`
-  for model info — so the backend URL stays a server secret. `lib/api.ts`
-  is guarded with `server-only`, making accidental client imports a
-  build-time error.
+  inside a Suspense boundary, and the market page's server component
+  fetches the initial aggregates + table page (`fetchMarketInitial`), so
+  the dashboard paints with data and skips the redundant first client
+  fetch — with a skeleton fallback and graceful degradation when the
+  backend is offline.
+- **Data fetching strategy**: all backend calls go through Next.js route
+  handlers (proxy) or server-side fetches — `cache: "no-store"` for
+  predictions and market data, `revalidate: 60` for model info — so the
+  backend URLs stay a server secret. `lib/api.ts` and
+  `lib/market-proxy.ts` are guarded with `server-only`, making accidental
+  client imports a build-time error.
 - **Custom hooks** for shared functionality: `usePrediction` (submit +
   loading/error state), `useHistory` (localStorage CRUD), and
   `useCompareSelection` (shared compare selection between pages).
+- **Smooth transitions**: page navigations cross-fade via the View
+  Transitions API (`experimental.viewTransition` + CSS in
+  `globals.css`) and result panels animate in; both respect
+  `prefers-reduced-motion`.
+- **App 1's Python backend**: the Task 1 FastAPI service in `../predict`
+  *is* the Python backend — the portal's `POST /api/predict` handler
+  submits the form to it and it validates, predicts and returns the batch.
+  No separate Python service is needed; see `../predict/README.md`.
 
 ## Quickstart
 

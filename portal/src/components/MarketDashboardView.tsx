@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatPrice } from "@/lib/format";
 import {
   EMPTY_FILTERS,
   filtersToQuery,
   type AggregatesResponse,
   type MarketFilterState,
+  type MarketInitialData,
   type PropertiesPage,
 } from "@/lib/market";
 import MarketDataTable from "./MarketDataTable";
@@ -51,18 +52,30 @@ function FilterSelect({
   );
 }
 
-/** Fetches one market endpoint; cancelled responses are ignored. */
-function useMarketJson<T>(url: string | null): {
+/**
+ * Fetches one market endpoint; cancelled responses are ignored. When the
+ * server component already loaded the mount-time URL (RSC initial data),
+ * `initial` seeds the state and the first fetch is skipped; every other
+ * URL change fetches normally.
+ */
+function useMarketJson<T>(url: string | null, initial?: T): {
   data: T | null;
   error: string | null;
   loading: boolean;
 } {
-  const [data, setData] = useState<T | null>(null);
+  const [data, setData] = useState<T | null>(initial ?? null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initial === undefined);
+  const seededUrl = useRef(initial !== undefined ? url : null);
 
   useEffect(() => {
     if (url === null) return;
+    if (seededUrl.current === url) {
+      // The server already fetched this exact URL; only fetch on change.
+      setLoading(false);
+      return;
+    }
+    seededUrl.current = null;
     let cancelled = false;
     setLoading(true);
     fetch(url, { cache: "no-store" })
@@ -121,9 +134,14 @@ function ChartBlock({ title, children }: { title: string; children: React.ReactN
 /**
  * Market dashboard (a.i/a.ii): segment filters drive aggregate stats,
  * charts, the sortable/paged data table and the export links, all served
- * by the market-api through the portal's proxy routes.
+ * by the market-api through the portal's proxy routes. `initialData` is
+ * the unfiltered data the page's server component already fetched.
  */
-export default function MarketDashboardView() {
+export default function MarketDashboardView({
+  initialData,
+}: {
+  initialData?: MarketInitialData | null;
+}) {
   const [filters, setFilters] = useState<MarketFilterState>(EMPTY_FILTERS);
   const [sortBy, setSortBy] = useState("price");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -153,8 +171,14 @@ export default function MarketDashboardView() {
     [filters, sortBy, sortDir, page, size],
   );
 
-  const aggregates = useMarketJson<AggregatesResponse>(aggregatesUrl);
-  const properties = useMarketJson<PropertiesPage>(propertiesUrl);
+  const aggregates = useMarketJson<AggregatesResponse>(
+    aggregatesUrl,
+    initialData?.aggregates ?? undefined,
+  );
+  const properties = useMarketJson<PropertiesPage>(
+    propertiesUrl,
+    initialData?.properties ?? undefined,
+  );
 
   const handleSort = (key: string) => {
     if (key === sortBy) {

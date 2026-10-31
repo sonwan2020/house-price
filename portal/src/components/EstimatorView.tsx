@@ -6,6 +6,7 @@ import { useHistory } from "@/hooks/useHistory";
 import { newId } from "@/lib/history";
 import { formatPrice } from "@/lib/format";
 import type { HouseInfo, HousePrice } from "@/lib/types";
+import PriceBarChart, { type ChartDatum } from "./PriceBarChart";
 import {
   FIELD_DEFS,
   type FieldName,
@@ -218,6 +219,22 @@ export default function EstimatorView() {
     return response.predicts[index];
   };
 
+  /** Property name for a result row: the submitted label or "Property N". */
+  const labelFor = (index: number): string => {
+    const id = response?.predicts[index]?.id;
+    return id || `Property ${index + 1}`;
+  };
+
+  // Results panel inputs: successful predictions (hero figure for one,
+  // bar chart for two or more) plus the per-item failures of the last run.
+  const succeeded = response?.predicts.filter((p) => p.price > 0) ?? [];
+  const failed = response?.predicts.filter((p) => p.price <= 0) ?? [];
+  const chartData: ChartDatum[] = succeeded.map((p) => ({
+    id: p.id || `property-${p.index}`,
+    label: labelFor(p.index),
+    value: p.price,
+  }));
+
   // Grid placement: row 1 holds the Remove controls (when shown), then the
   // Name row, one row per feature, then the Estimate price row. The label
   // column is rendered first and each property's cells are grouped by
@@ -426,6 +443,54 @@ export default function EstimatorView() {
           </p>
         )}
       </section>
+
+      {/* Results panel: summary chips, then a hero figure for a single
+          estimate or a bar chart for a batch, plus failure reasons. */}
+      {status === "success" && response && (
+        <section className="fade-in-up rounded-lg border border-hairline bg-surface p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-ink">Results</h2>
+            <div className="flex flex-wrap gap-2" aria-label="Batch summary">
+              <span className="chip">{response.summary.total} submitted</span>
+              <span className="chip text-good-ink">{response.summary.succeed} estimated</span>
+              {response.summary.failed > 0 && (
+                <span className="chip text-critical">{response.summary.failed} failed</span>
+              )}
+            </div>
+          </div>
+
+          {succeeded.length === 1 && (
+            <div className="mt-4 rounded-md border border-hairline bg-page px-4 py-6 text-center">
+              <p className="text-xs font-medium text-ink-muted">
+                Estimated price · {labelFor(succeeded[0].index)}
+              </p>
+              <p className="mt-2 text-4xl font-semibold tabular-nums text-good-ink">
+                {formatPrice(succeeded[0].price)}
+              </p>
+            </div>
+          )}
+
+          {succeeded.length >= 2 && (
+            <div className="mt-4">
+              <PriceBarChart data={chartData} metricLabel="Estimated price" />
+            </div>
+          )}
+
+          {failed.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold text-ink">Not estimated</h3>
+              <ul className="mt-2 space-y-1 text-sm text-ink-secondary">
+                {failed.map((p) => (
+                  <li key={p.index}>
+                    <span className="font-medium text-ink">{labelFor(p.index)}</span>
+                    {p.reason ? ` — ${p.reason}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

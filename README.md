@@ -13,16 +13,27 @@ the whole stack.
 ```
 .
 ├── docker-compose.yaml     # orchestrates all services (single command start)
+├── Makefile                # local workflow helpers (train / test / up / down / logs)
 ├── .env.example            # compose interpolation vars (copy to .env)
-├── predict/                # house price prediction API (FastAPI)
+├── predict/                # Task 1: house price prediction API (FastAPI) — also App 1's Python backend
 │   ├── Dockerfile          # builds the image; trains the model if artifacts are missing
 │   └── README.md           # API details: endpoints, validation rules, local dev
+├── market/                 # App 2 backend: market analysis API (Spring Boot 3.4.4 / Java 21)
+│   ├── Dockerfile          # multi-stage Maven build → JRE image
+│   └── README.md           # endpoints, filters, configuration
 └── portal/                 # frontend (Next.js App Router, Tailwind, Recharts)
     ├── Dockerfile          # multi-stage build → standalone Next server
     └── README.md           # portal details: pages, proxy routes, validation
 ```
 
-See `market/README.md` for the App 2 endpoints and configuration.
+**Backend roles**: App 1 (estimator) has no separate Python service — the
+Task 1 FastAPI container *is* its Python backend: the portal submits forms
+to `POST /api/v1/predict`, which validates and predicts (see
+`portal/README.md`). App 2's backend is the Java `market/` service, which
+calls the same ML container for what-if analysis.
+
+**Interactive docs**: Task 1 API → http://localhost:8000/docs ·
+market-api (springdoc) → http://localhost:8080/swagger-ui.html
 
 ## Quickstart
 
@@ -70,5 +81,6 @@ this root (copy `.env.example` to `.env` and adjust).
 
 | Service | Description | Where to look |
 |---------|-------------|---------------|
-| `api`    | House price prediction API (FastAPI) | [`predict/README.md`](predict/README.md) |
-| `portal` | Property Value Estimator frontend (Next.js) | [`portal/README.md`](portal/README.md) |
+| `api`    | House price prediction API (FastAPI) — also App 1's Python backend | [`predict/README.md`](predict/README.md) |
+| `market-api` | Property market analysis API (Spring Boot / Java) | [`market/README.md`](market/README.md) |
+| `portal` | Unified Next.js portal: estimator + market dashboard | [`portal/README.md`](portal/README.md) |

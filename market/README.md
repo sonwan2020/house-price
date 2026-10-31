@@ -1,8 +1,11 @@
 # market-api — Property Market Analysis (App 2 backend)
 
-Spring Boot 3 / Java 21 service that turns the housing dataset into market
+Spring Boot 3.4.4 / Java 21 service that turns the housing dataset into market
 insights: filtered aggregate statistics, a sortable data table API, what-if
 analysis through the Task 1 ML container, and CSV/PDF exports.
+
+Interactive docs (springdoc): http://127.0.0.1:8080/swagger-ui.html
+(OpenAPI JSON at `/v3/api-docs`).
 
 ## Endpoints
 

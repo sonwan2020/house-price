@@ -7,6 +7,15 @@ spring:
     property-naming-strategy: SNAKE_CASE
     default-property-inclusion: non_null
 
+# Swagger UI / OpenAPI for the live demo (springdoc), served at
+# /swagger-ui.html and /v3/api-docs. The info block (title, description,
+# version) comes from OpenApiConfig#marketOpenApi.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
 server:
   port: 8080
 

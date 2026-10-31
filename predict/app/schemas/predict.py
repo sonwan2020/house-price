@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field, RootModel
 CURRENT_YEAR = datetime.now().year
 
 #: Required features, in model input order (matches scripts/train.py).
+#: Note: the deployed model is trained with DROP_FEATURES=lot_size (it is
+#: collinear with square_footage — see predict/README.md, "Model selection"),
+#: but lot_size stays required here so the request contract is the full
+#: dataset schema regardless of which model variant is trained into the
+#: image. GET /api/v1/model-info reports the model's actual feature order.
 FEATURE_ORDER = [
     "square_footage",
     "bedrooms",

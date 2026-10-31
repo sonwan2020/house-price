@@ -56,4 +56,59 @@
   .field-input {
     @apply w-full rounded-md border border-hairline bg-white px-3 py-2 text-sm text-ink transition-colors placeholder:text-ink-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30;
   }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-hairline bg-page px-2.5 py-0.5 text-xs font-medium text-ink-secondary;
+  }
+}
+
+/*
+ * Smooth transitions between pages and application states (2.d).
+ * Pages: View Transitions API, enabled via experimental.viewTransition in
+ * next.config.ts — a short cross-fade between route navigations.
+ * States: .fade-in-up enters result panels after a round-trip.
+ * Both respect prefers-reduced-motion.
+ */
+::view-transition-old(root) {
+  animation: page-fade-out 120ms ease-out forwards;
+}
+
+::view-transition-new(root) {
+  animation: page-fade-in 200ms ease-out;
+}
+
+@keyframes page-fade-out {
+  to {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+.fade-in-up {
+  animation: fade-in-up 240ms ease-out;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  .fade-in-up {
+    animation: none;
+  }
 }
