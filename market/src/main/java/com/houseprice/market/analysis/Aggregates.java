@@ -3,7 +3,7 @@ package com.houseprice.market.analysis;
 import java.util.List;
 import java.util.Map;
 
-/** Response records for GET /api/market/aggregates. */
+/** Response records for GET /api/v1/market/aggregates. */
 public final class Aggregates {
 
   private Aggregates() {}

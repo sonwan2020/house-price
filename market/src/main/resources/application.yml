@@ -21,7 +21,7 @@ server:
 
 market:
   # CSV loaded at startup (fail fast when missing) and re-readable via
-  # POST /api/market/reload, e.g. after the dataset volume changes.
+  # POST /api/v1/market/reload, e.g. after the dataset volume changes.
   data-file: ${DATA_FILE:/data/House Price Dataset.csv}
   # The Task 1 ML container; server-side calls only, same as the portal.
   python-api-url: ${PYTHON_API_URL:http://api:8000}

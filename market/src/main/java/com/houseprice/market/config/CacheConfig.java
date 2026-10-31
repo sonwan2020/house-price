@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
  * Caching (b.iv): in-memory Caffeine caches with per-cache TTLs.
  * `aggregates` holds filtered aggregate results, `whatIf` prediction
  * batches, `ml` the model-info passthrough and `mlHealth` the short-lived
- * ML reachability probe used by /health. POST /api/market/reload evicts
+ * ML reachability probe used by /health. POST /api/v1/market/reload evicts
  * all of them.
  */
 @Configuration

@@ -24,7 +24,7 @@ export interface HistogramBin {
   count: number;
 }
 
-/** Response body of GET /api/market/aggregates. */
+/** Response body of GET /api/v1/market/aggregates. */
 export interface AggregatesResponse {
   filters: Record<string, string | number>;
   count: number;
@@ -43,7 +43,7 @@ export interface MarketInitialData {
   properties: PropertiesPage;
 }
 
-/** One dataset row as served by GET /api/market/properties. */
+/** One dataset row as served by GET /api/v1/market/properties. */
 export interface MarketProperty {
   id: number;
   square_footage: number;
@@ -71,7 +71,7 @@ export interface ScenarioOutcome {
   reason: string;
 }
 
-/** Response body of POST /api/market/what-if. */
+/** Response body of POST /api/v1/market/what-if. */
 export interface WhatIfResult {
   baseline_price: number;
   baseline_reason: string;

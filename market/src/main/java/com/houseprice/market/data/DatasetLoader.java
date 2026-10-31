@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Loads the housing CSV (b.ii) at startup — failing fast when missing or
- * malformed — and again on POST /api/market/reload. The dataset arrives
+ * malformed — and again on POST /api/v1/market/reload. The dataset arrives
  * through the read-only volume shared with the predict service.
  */
 @Component

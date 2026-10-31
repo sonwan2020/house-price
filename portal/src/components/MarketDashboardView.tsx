@@ -220,8 +220,8 @@ export default function MarketDashboardView({
       value: band.mean_price,
     }));
 
-  const csvHref = `/api/market/export${filtersToQuery(filters, { format: "csv" })}`;
-  const pdfHref = `/api/market/export${filtersToQuery(filters, { format: "pdf" })}`;
+  const csvHref = `/api/market/export${filtersToQuery(filters, { type: "csv" })}`;
+  const pdfHref = `/api/market/export${filtersToQuery(filters, { type: "pdf" })}`;
 
   return (
     <section>

@@ -32,8 +32,8 @@ export async function proxyMarketJson(path: string, init?: RequestInit) {
  */
 export async function fetchMarketInitial(): Promise<MarketInitialData> {
   const [aggregatesRes, propertiesRes] = await Promise.all([
-    fetch(`${MARKET_API_URL}/api/market/aggregates`, { cache: "no-store" }),
-    fetch(`${MARKET_API_URL}/api/market/properties?sortBy=price&sortDir=desc&page=0&size=25`, {
+    fetch(`${MARKET_API_URL}/api/v1/market/aggregates`, { cache: "no-store" }),
+    fetch(`${MARKET_API_URL}/api/v1/market/properties?sortBy=price&sortDir=desc&page=0&size=25`, {
       cache: "no-store",
     }),
   ]);

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** Request/response records for POST /api/market/what-if (a.iii). */
+/** Request/response records for POST /api/v1/market/what-if (a.iii). */
 public final class WhatIfModels {
 
   private WhatIfModels() {}

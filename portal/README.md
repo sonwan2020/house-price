@@ -53,13 +53,14 @@ portal/
 │   │       ├── model-info/   #   GET  → GET /api/v1/model-info (60s revalidate)
 │   │       ├── health/       #   GET  → liveness probe (Docker HEALTHCHECK)
 │   │       └── market/       #   App 2 proxies → the Java market-api
-│   │           ├── aggregates/  # GET  → GET /api/market/aggregates
-│   │           ├── properties/  # GET  → GET /api/market/properties
-│   │           ├── what-if/     # POST → POST /api/market/what-if
-│   │           └── export/      # GET  → GET /api/market/export.{csv,pdf}
+│   │           ├── aggregates/  # GET  → GET /api/v1/market/aggregates
+│   │           ├── properties/  # GET  → GET /api/v1/market/properties
+│   │           ├── what-if/     # POST → POST /api/v1/market/what-if
+│   │           └── export/      # GET  → GET /api/v1/market/export?type=csv|pdf
+│   │               └── what-if/ # POST → POST /api/v1/market/export/what-if?type=csv|pdf
 │   ├── components/           # server: ModelInfoPanel, ModelInfoCard, skeleton
 │   │                         # client: form + results, history, compare, charts, nav
-│   ├── hooks/                # usePrediction, useHistory, useCompareSelection
+│   ├── hooks/                # usePrediction, useHistory, useWhatIfHistory, useCompareSelection
 │   └── lib/                  # types, validation, formatting, storage, api + market server helpers
 ├── .env.example              # PYTHON_API_URL, MARKET_API_URL (copy to .env.local)
 └── public/

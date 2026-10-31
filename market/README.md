@@ -12,16 +12,19 @@ Interactive docs (springdoc): http://127.0.0.1:8080/swagger-ui.html
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/health` | Liveness probe (also the Docker HEALTHCHECK); reports dataset size and ML reachability |
-| GET | `/api/market/aggregates` | Filtered aggregate stats: price stats, price per sq ft, breakdowns by bedrooms / year band / school band / distance band, price histogram |
-| GET | `/api/market/properties` | Paged, sorted, filtered dataset rows (`sortBy`, `sortDir`, `page`, `size`) |
-| POST | `/api/market/what-if` | Baseline + scenarios predicted by the ML container; returns per-scenario price and delta vs baseline |
-| GET | `/api/market/export.csv` | Filtered rows as a downloadable CSV |
-| GET | `/api/market/export.pdf` | Filtered summary sheet as a downloadable PDF |
-| GET | `/api/market/model-info` | Task 1 model metadata, passed through |
-| POST | `/api/market/reload` | Re-reads the dataset CSV and clears all caches |
+| GET | `/api/v1/market/aggregates` | Filtered aggregate stats: price stats, price per sq ft, breakdowns by bedrooms / year band / school band / distance band, price histogram |
+| GET | `/api/v1/market/properties` | Paged, sorted, filtered dataset rows (`sortBy`, `sortDir`, `page`, `size`) |
+| POST | `/api/v1/market/what-if` | Baseline + scenarios predicted by the ML container; returns per-scenario price and delta vs baseline |
+| GET | `/api/v1/market/export?type=csv\|pdf` | Filtered rows (CSV) or summary sheet (PDF) as a download |
+| POST | `/api/v1/market/export/what-if?type=csv\|pdf` | Saved what-if runs (current run or history) rendered as CSV or PDF |
+| GET | `/api/v1/market/model-info` | Task 1 model metadata, passed through |
+| POST | `/api/v1/market/reload` | Re-reads the dataset CSV and clears all caches |
 
 JSON keys are snake_case (matching the Task 1 vocabulary); query params bind
 in camelCase — the JSON name `min_year_built` is the query param `minYearBuilt`.
+
+All endpoints are versioned under `/api/v1/market`; the Swagger info block
+carries the matching version (v1, `1.0.0`).
 
 ## Segment filters (query params, all optional)
 
