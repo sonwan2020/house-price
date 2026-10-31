@@ -1,5 +1,5 @@
 /**
- * GET /api/market/export?format=csv|pdf — server-side proxy to the market
+ * GET /api/market/export?type=csv|pdf — server-side proxy to the market
  * analysis service. Streams the upstream file bytes with the upstream
  * content type and disposition, so the browser saves the attachment.
  */
@@ -8,20 +8,20 @@ import { MARKET_API_URL } from "@/lib/api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const format = searchParams.get("format");
-  if (format !== "csv" && format !== "pdf") {
+  const type = searchParams.get("type");
+  if (type !== "csv" && type !== "pdf") {
     return NextResponse.json(
-      { detail: "format must be 'csv' or 'pdf'." },
+      { detail: "type must be 'csv' or 'pdf'." },
       { status: 400 },
     );
   }
-  searchParams.delete("format");
+  searchParams.delete("type");
   const query = searchParams.toString();
 
   let upstream: Response;
   try {
     upstream = await fetch(
-      `${MARKET_API_URL}/api/market/export.${format}${query ? `?${query}` : ""}`,
+      `${MARKET_API_URL}/api/v1/market/export?type=${type}${query ? `&${query}` : ""}`,
       { cache: "no-store" },
     );
   } catch {

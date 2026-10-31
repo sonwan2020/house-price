@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { useWhatIfHistory } from "@/hooks/useWhatIfHistory";
+import { formatDateTime, formatNumber, formatPrice } from "@/lib/format";
 import { newId } from "@/lib/history";
-import { formatNumber, formatPrice } from "@/lib/format";
 import type { WhatIfResult } from "@/lib/market";
+import { toExportRuns, type WhatIfExportRun } from "@/lib/what-if-history";
 import {
   FIELD_DEFS,
   type FeatureValues,
@@ -14,6 +16,7 @@ import {
   validateFeatures,
 } from "@/lib/validation";
 import DeltaBarChart from "./DeltaBarChart";
+import ExportDialog from "./ExportDialog";
 
 const MAX_SCENARIOS = 10;
 
@@ -49,6 +52,9 @@ function baselineValueOf(feature: FieldName, values: FeatureValues): string {
   return formatNumber(Number(values[feature]));
 }
 
+/** "2026-10-31"-style date for the default export file names. */
+const todayStamp = (): string => new Date().toISOString().slice(0, 10);
+
 /**
  * What-if analysis tool (a.iii): a baseline house plus scenarios that
  * change one feature each. The batch is predicted by the Task 1 model via
@@ -63,6 +69,12 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
   const [submitError, setSubmitError] = useState<string[] | null>(null);
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [result, setResult] = useState<WhatIfResult | null>(null);
+  const history = useWhatIfHistory();
+  const [exportDialog, setExportDialog] = useState<{
+    title: string;
+    defaultName: string;
+    runs: WhatIfExportRun[];
+  } | null>(null);
 
   const setFieldValue = (field: FieldName, value: string) => {
     setBaseline((prev) => ({ ...prev, [field]: value }));
@@ -149,7 +161,23 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
         setSubmitError(messages.length > 0 ? messages : ["The market analysis service failed."]);
         return;
       }
-      setResult(data as WhatIfResult);
+      const resultData = data as WhatIfResult;
+      setResult(resultData);
+      // Save the run to the page's history: one entry per batch, each
+      // scenario keeping its changed feature and the outcome.
+      history.add({
+        baseline: toHouseFeatures(baseline),
+        baselinePrice: resultData.baseline_price,
+        scenarios: scenarios.map((scenario, index) => ({
+          name: scenario.name.trim(),
+          feature: scenario.feature,
+          from: Number(baseline[scenario.feature]),
+          to: Number(scenario.value),
+          price: resultData.scenarios[index]?.price ?? 0,
+          delta: resultData.scenarios[index]?.delta ?? null,
+          reason: resultData.scenarios[index]?.reason ?? "",
+        })),
+      });
     } catch {
       setSubmitError(["The market analysis service is unreachable. Please try again later."]);
     } finally {
@@ -397,6 +425,133 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Saved runs: the changed value of each scenario is highlighted
+          against its baseline (localStorage, newest first). */}
+      <section className="mt-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-ink">What-if history</h2>
+          <div className="flex items-center gap-2">
+            {history.entries.length > 0 && (
+              <button type="button" onClick={history.clear} className="btn-secondary px-3 py-1.5 text-xs">
+                Clear history
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={history.entries.length === 0}
+              onClick={() =>
+                setExportDialog({
+                  title: "Export what-if history",
+                  defaultName: `what-if-history-${todayStamp()}`,
+                  runs: toExportRuns(history.entries),
+                })
+              }
+              className="btn-secondary px-3 py-1.5 text-xs"
+            >
+              ⭳ Export history
+            </button>
+          </div>
+        </div>
+
+        {history.entries.length === 0 ? (
+          <p className="mt-2 text-xs text-ink-muted">
+            Run an analysis — each batch is saved here with its changes highlighted against the
+            baseline.
+          </p>
+        ) : (
+          <div className="mt-3 overflow-x-auto rounded-lg border border-hairline bg-surface p-5">
+            <table className="min-w-[720px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-hairline text-left align-bottom">
+                  <th className="py-2 pr-4 text-xs font-medium text-ink-muted">When</th>
+                  <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Scenario</th>
+                  <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Change</th>
+                  <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Predicted price</th>
+                  <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Delta</th>
+                  <th className="py-2 text-right text-xs font-medium text-ink-muted">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.entries.map((entry) =>
+                  entry.scenarios.map((scenario, index) => (
+                    <tr key={`${entry.id}-${index}`} className="border-b border-hairline last:border-0">
+                      {index === 0 && (
+                        <td rowSpan={entry.scenarios.length} className="py-2 pr-4 align-top">
+                          <span className="block font-medium text-ink">
+                            {formatDateTime(entry.createdAt)}
+                          </span>
+                          <span className="block text-xs text-ink-muted">
+                            Baseline{" "}
+                            {entry.baselinePrice > 0 ? formatPrice(entry.baselinePrice) : "—"}
+                          </span>
+                        </td>
+                      )}
+                      <td className="py-2 pr-4 font-medium text-ink">{scenario.name}</td>
+                      <td className="py-2 pr-4">
+                        <span className="text-ink-muted">{fieldLabel(scenario.feature)}:</span>{" "}
+                        <span className="text-ink-muted">
+                          {formatNumber(scenario.from, Number.isInteger(scenario.from) ? 0 : 1)}
+                        </span>
+                        {" → "}
+                        <span className="rounded bg-warning/20 px-1.5 py-0.5 font-semibold text-ink">
+                          {formatNumber(scenario.to, Number.isInteger(scenario.to) ? 0 : 1)}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4">
+                        {scenario.price > 0 ? (
+                          <span className="font-semibold tabular-nums text-ink">
+                            {formatPrice(scenario.price)}
+                          </span>
+                        ) : (
+                          <span className="text-critical">{scenario.reason || "Not predicted"}</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {scenario.delta === null ? (
+                          <span className="text-ink-muted">—</span>
+                        ) : (
+                          <span
+                            className={`font-semibold tabular-nums ${
+                              scenario.delta > 0
+                                ? "text-good-ink"
+                                : scenario.delta < 0
+                                  ? "text-critical"
+                                  : "text-ink-muted"
+                            }`}
+                          >
+                            {scenario.delta > 0 ? "+" : scenario.delta < 0 ? "−" : ""}
+                            {formatPrice(Math.abs(scenario.delta))}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => history.remove(entry.id)}
+                          aria-label={`Delete run from ${entry.createdAt}`}
+                          className="text-xs text-ink-muted underline transition-colors hover:text-critical"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {exportDialog && (
+        <ExportDialog
+          title={exportDialog.title}
+          defaultName={exportDialog.defaultName}
+          runs={exportDialog.runs}
+          onClose={() => setExportDialog(null)}
+        />
       )}
     </section>
   );

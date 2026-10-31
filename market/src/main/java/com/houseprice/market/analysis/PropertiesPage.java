@@ -4,5 +4,5 @@ import java.util.List;
 
 import com.houseprice.market.data.House;
 
-/** Paged dataset rows for GET /api/market/properties. */
+/** Paged dataset rows for GET /api/v1/market/properties. */
 public record PropertiesPage(int total, int page, int size, List<House> properties) {}

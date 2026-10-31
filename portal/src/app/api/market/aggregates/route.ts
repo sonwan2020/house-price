@@ -7,5 +7,5 @@ import { proxyMarketJson } from "@/lib/market-proxy";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.toString();
-  return proxyMarketJson(`/api/market/aggregates${query ? `?${query}` : ""}`);
+  return proxyMarketJson(`/api/v1/market/aggregates${query ? `?${query}` : ""}`);
 }

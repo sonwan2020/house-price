@@ -50,7 +50,7 @@ class MarketApiIntegrationTest {
 
   @Test
   void aggregatesReturnStats() throws Exception {
-    mockMvc.perform(get("/api/market/aggregates"))
+    mockMvc.perform(get("/api/v1/market/aggregates"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.count").value(6))
         .andExpect(jsonPath("$.price.mean").value(273333.3))
@@ -62,7 +62,7 @@ class MarketApiIntegrationTest {
 
   @Test
   void aggregatesHonorFilters() throws Exception {
-    mockMvc.perform(get("/api/market/aggregates").param("bedrooms", "3"))
+    mockMvc.perform(get("/api/v1/market/aggregates").param("bedrooms", "3"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.count").value(2))
         .andExpect(jsonPath("$.filters.bedrooms").value(3));
@@ -70,7 +70,7 @@ class MarketApiIntegrationTest {
 
   @Test
   void propertiesSortAndPage() throws Exception {
-    mockMvc.perform(get("/api/market/properties")
+    mockMvc.perform(get("/api/v1/market/properties")
             .param("sortBy", "price").param("sortDir", "desc").param("size", "2"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").value(6))
@@ -81,14 +81,14 @@ class MarketApiIntegrationTest {
 
   @Test
   void propertiesRejectUnknownSort() throws Exception {
-    mockMvc.perform(get("/api/market/properties").param("sortBy", "garages"))
+    mockMvc.perform(get("/api/v1/market/properties").param("sortBy", "garages"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Unknown sort_by")));
   }
 
   @Test
   void propertiesRejectBadParamType() throws Exception {
-    mockMvc.perform(get("/api/market/properties").param("minYearBuilt", "abc"))
+    mockMvc.perform(get("/api/v1/market/properties").param("minYearBuilt", "abc"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.detail").value("Validation failed."))
         .andExpect(jsonPath("$.errors.minYearBuilt")
@@ -103,7 +103,7 @@ class MarketApiIntegrationTest {
             new MlModels.MlHousePrice(0, "baseline", 300000, ""),
             new MlModels.MlHousePrice(1, "+1 bedroom", 330000, ""))));
 
-    mockMvc.perform(post("/api/market/what-if")
+    mockMvc.perform(post("/api/v1/market/what-if")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"baseline": {"square_footage": 1500, "bedrooms": 3, "bathrooms": 2,
@@ -119,7 +119,7 @@ class MarketApiIntegrationTest {
 
   @Test
   void whatIfRejectsUnknownFeature() throws Exception {
-    mockMvc.perform(post("/api/market/what-if")
+    mockMvc.perform(post("/api/v1/market/what-if")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"baseline": {"square_footage": 1500, "bedrooms": 3, "bathrooms": 2,
@@ -134,7 +134,7 @@ class MarketApiIntegrationTest {
 
   @Test
   void exportCsvDownloadsFilteredRows() throws Exception {
-    mockMvc.perform(get("/api/market/export.csv").param("bedrooms", "2"))
+    mockMvc.perform(get("/api/v1/market/export").param("type", "csv").param("bedrooms", "2"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith("text/csv"))
         .andExpect(content().string(org.hamcrest.Matchers.containsString("id,square_footage")))
@@ -145,7 +145,57 @@ class MarketApiIntegrationTest {
 
   @Test
   void exportPdfDownloadsSummary() throws Exception {
-    byte[] pdf = mockMvc.perform(get("/api/market/export.pdf"))
+    byte[] pdf = mockMvc.perform(get("/api/v1/market/export").param("type", "pdf"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("application/pdf"))
+        .andReturn().getResponse().getContentAsByteArray();
+
+    assertThat(new String(pdf, 0, 4, StandardCharsets.ISO_8859_1)).startsWith("%PDF");
+  }
+
+  @Test
+  void exportRejectsUnknownType() throws Exception {
+    mockMvc.perform(get("/api/v1/market/export").param("type", "xlsx"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.detail").value("type must be 'csv' or 'pdf'."));
+  }
+
+  @Test
+  void exportWhatIfCsvRendersRuns() throws Exception {
+    mockMvc.perform(post("/api/v1/market/export/what-if")
+            .param("type", "csv")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"runs": [{"label": "Current run", "created_at": "2026-10-31T10:00:00Z",
+                  "baseline": {"square_footage": 1500, "bedrooms": 3, "bathrooms": 2,
+                    "year_built": 2000, "lot_size": 6000, "distance_to_city_center": 5,
+                    "school_rating": 8},
+                  "baseline_price": 300000,
+                  "scenarios": [{"name": "+1 bedroom", "changes": {"bedrooms": 4},
+                    "price": 330000, "delta": 30000, "reason": ""}]}]}
+                """))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("text/csv"))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString(
+            "run,created_at,baseline_price,scenario,feature,base_value,new_value,predicted_price,delta")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString(
+            "Current run,2026-10-31T10:00:00Z,300000,+1 bedroom,bedrooms,3,4,330000,30000")));
+  }
+
+  @Test
+  void exportWhatIfPdfRendersRuns() throws Exception {
+    byte[] pdf = mockMvc.perform(post("/api/v1/market/export/what-if")
+            .param("type", "pdf")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"runs": [{"label": "Current run", "created_at": "2026-10-31T10:00:00Z",
+                  "baseline": {"square_footage": 1500, "bedrooms": 3, "bathrooms": 2,
+                    "year_built": 2000, "lot_size": 6000, "distance_to_city_center": 5,
+                    "school_rating": 8},
+                  "baseline_price": 300000,
+                  "scenarios": [{"name": "+1 bedroom", "changes": {"bedrooms": 4},
+                    "price": 330000, "delta": 30000, "reason": ""}]}]}
+                """))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith("application/pdf"))
         .andReturn().getResponse().getContentAsByteArray();
@@ -157,14 +207,14 @@ class MarketApiIntegrationTest {
   void modelInfoPassesThrough() throws Exception {
     when(mlClient.modelInfo()).thenReturn(Map.of("model", "linear"));
 
-    mockMvc.perform(get("/api/market/model-info"))
+    mockMvc.perform(get("/api/v1/market/model-info"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.model").value("linear"));
   }
 
   @Test
   void reloadRereadsDataset() throws Exception {
-    mockMvc.perform(post("/api/market/reload"))
+    mockMvc.perform(post("/api/v1/market/reload"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("reloaded"))
         .andExpect(jsonPath("$.properties").value(6));

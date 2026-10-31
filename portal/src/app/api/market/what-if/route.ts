@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Request body must be a JSON object." }, { status: 400 });
   }
 
-  return proxyMarketJson("/api/market/what-if", {
+  return proxyMarketJson("/api/v1/market/what-if", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
