@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { MAX_COMPARE, useCompareSelection } from "@/hooks/useCompareSelection";
 import { useHistory } from "@/hooks/useHistory";
-import { formatDateTime, formatNumber, formatPrice } from "@/lib/format";
+import { formatNumber, formatPrice } from "@/lib/format";
 import type { HouseFeatures } from "@/lib/types";
 import EmptyState from "./EmptyState";
 
@@ -18,7 +18,7 @@ const FEATURE_COLUMNS: {
   { key: "bathrooms", label: "Bathrooms", render: (f) => formatNumber(f.bathrooms, 1) },
   { key: "year_built", label: "Year built", render: (f) => String(f.year_built) },
   { key: "lot_size", label: "Lot size (sq ft)", render: (f) => formatNumber(f.lot_size) },
-  { key: "distance_to_city_center", label: "Distance to city centre (miles)", render: (f) => formatNumber(f.distance_to_city_center, 1) },
+  { key: "distance_to_city_center", label: "Distance (miles)", render: (f) => formatNumber(f.distance_to_city_center, 1) },
   { key: "school_rating", label: "School rating", render: (f) => formatNumber(f.school_rating, 1) },
 ];
 
@@ -104,9 +104,6 @@ export default function HistoryView() {
                   <tr key={entry.id} className="border-b border-hairline last:border-0">
                     <td className="py-2 pr-4">
                       <span className="font-medium text-ink">{entry.label}</span>
-                      <span className="block text-xs text-ink-muted">
-                        {formatDateTime(entry.createdAt)}
-                      </span>
                     </td>
                     {FEATURE_COLUMNS.map((col) => (
                       <td key={col.key} className="py-2 pr-4 tabular-nums text-ink-secondary">

@@ -34,7 +34,7 @@ export const FIELD_DEFS: readonly FieldDef[] = [
   { name: "bathrooms", label: "Bathrooms", step: "0.5", min: 0, minExclusive: true, max: 20 },
   { name: "year_built", label: "Year built", step: "1", integer: true, min: 1900, max: CURRENT_YEAR + 5, select: true },
   { name: "lot_size", label: "Lot size", unit: "sq ft", step: "1", min: 0, minExclusive: true, max: 1_000_000 },
-  { name: "distance_to_city_center", label: "Distance to city centre", unit: "miles", step: "0.1", min: 0, max: 1_000 },
+  { name: "distance_to_city_center", label: "Distance", unit: "miles", step: "0.1", min: 0, max: 1_000 },
   { name: "school_rating", label: "School rating", step: "0.1", min: 0, max: 10 },
 ];
 

@@ -276,7 +276,7 @@ export default function MarketDashboardView({
             onChange={(value) => setFilter("minSchoolRating", value)}
           />
           <FilterSelect
-            label="Max distance to city centre (miles)"
+            label="Max distance (miles)"
             value={filters.maxDistanceToCityCenter}
             options={DISTANCE_OPTIONS}
             allLabel="Any"
@@ -360,7 +360,7 @@ export default function MarketDashboardView({
                   metricLabel="Average price"
                 />
               </ChartBlock>
-              <ChartBlock title="Average price by distance to city centre">
+              <ChartBlock title="Average price by distance to centre">
                 <PriceBarChart
                   data={bandChart(data.by_distance_band, "distance")}
                   metricLabel="Average price"
