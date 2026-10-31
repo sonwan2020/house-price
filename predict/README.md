@@ -190,9 +190,15 @@ Features (all required): `square_footage`, `bedrooms`, `bathrooms`,
 `id` is an optional string, echoed back unchanged; defaults to an empty
 string when omitted.
 
+`lot_size` is always required even though the default model is trained
+without it (`DROP_FEATURES=lot_size`, see "Model selection"): the request
+contract stays the full dataset schema no matter which model variant is
+deployed, and clients don't change when the model does.
+`GET /api/v1/model-info` reports the deployed model's actual feature order.
+
 Validation per item: all fields required, must be numbers, `bedrooms` /
 `year_built` must be integers, plus sanity ranges (positive footage/lot size,
-`year_built` 1800–current year + 5, `school_rating` 0–10, ...).
+`year_built` 1900–current year + 5, `school_rating` 0–10, ...).
 
 Status codes:
 

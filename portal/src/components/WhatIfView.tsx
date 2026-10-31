@@ -314,7 +314,7 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
       )}
 
       {result && (
-        <div className="mt-6 space-y-4">
+        <div className="fade-in-up mt-6 space-y-4">
           <div className="rounded-lg border border-hairline bg-surface p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>

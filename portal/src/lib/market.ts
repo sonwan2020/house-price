@@ -37,6 +37,12 @@ export interface AggregatesResponse {
   price_histogram: HistogramBin[];
 }
 
+/** Initial dashboard data fetched by the market page's server component. */
+export interface MarketInitialData {
+  aggregates: AggregatesResponse;
+  properties: PropertiesPage;
+}
+
 /** One dataset row as served by GET /api/market/properties. */
 export interface MarketProperty {
   id: number;
