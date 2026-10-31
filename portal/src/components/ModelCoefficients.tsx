@@ -46,36 +46,37 @@ export default async function ModelCoefficients() {
         What each dimension is worth in the {modelInfo.model} model — the predicted price
         moves by this amount per unit, with every other dimension held constant.
       </p>
-      <div className="mt-2 grid grid-cols-1 gap-x-8">
-        {entries.map(([name, value]) => (
-          <div
-            key={name}
-            className="flex items-baseline justify-between gap-3 border-b border-hairline py-1.5"
-          >
-            <span className="text-sm text-ink-secondary">
-              {LABELS[name] ?? name}{" "}
-              <span className="text-ink-muted">per {UNITS[name] ?? "unit"}</span>
-            </span>
-            <span
-              className={`text-sm font-semibold tabular-nums ${
-                value >= 0 ? "text-good-ink" : "text-critical"
-              }`}
-            >
-              {signed(value)}
-            </span>
-          </div>
-        ))}
-        <div className="flex items-baseline justify-between gap-3 border-b border-hairline py-1.5">
-          <span className="text-sm text-ink-secondary">
-            Base value <span className="text-ink-muted">(intercept)</span>
-          </span>
-          {/* The intercept is a mathematical offset, not a feature — the
-              sign constraint does not apply to it, so it stays neutral. */}
-          <span className="text-sm font-semibold tabular-nums text-ink">
-            {signed(intercept)}
-          </span>
-        </div>
-      </div>
+      {/* Auto table layout: each column is as wide as its longest cell, so
+          the table hugs its text instead of stretching to the card width. */}
+      <table className="mt-2 border-collapse text-sm">
+        <tbody>
+          {entries.map(([name, value]) => (
+            <tr key={name} className="border-b border-hairline">
+              <td className="whitespace-nowrap py-1.5 pr-8 text-ink-secondary">
+                {LABELS[name] ?? name}{" "}
+                <span className="text-ink-muted">per {UNITS[name] ?? "unit"}</span>
+              </td>
+              <td
+                className={`whitespace-nowrap py-1.5 text-right font-semibold tabular-nums ${
+                  value >= 0 ? "text-good-ink" : "text-critical"
+                }`}
+              >
+                {signed(value)}
+              </td>
+            </tr>
+          ))}
+          <tr className="border-b border-hairline">
+            <td className="whitespace-nowrap py-1.5 pr-8 text-ink-secondary">
+              Base value <span className="text-ink-muted">(intercept)</span>
+            </td>
+            {/* The intercept is a mathematical offset, not a feature — the
+                sign constraint does not apply to it, so it stays neutral. */}
+            <td className="whitespace-nowrap py-1.5 text-right font-semibold tabular-nums text-ink">
+              {signed(intercept)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <p className="mt-2 text-xs text-ink-muted">
         A scenario&apos;s delta is the sum of these per-unit moves for the changed dimensions;
         predicted prices are rounded to the nearest $1,000.

@@ -25,7 +25,7 @@ const ROWS: {
   { key: "bathrooms", label: "Bathrooms", value: (e) => e.features.bathrooms, best: "max", render: (e) => formatNumber(e.features.bathrooms, 1) },
   { key: "year_built", label: "Year built", value: (e) => e.features.year_built, best: "max", render: (e) => String(e.features.year_built) },
   { key: "lot_size", label: "Lot size (sq ft)", value: (e) => e.features.lot_size, best: "max", render: (e) => formatNumber(e.features.lot_size) },
-  { key: "distance_to_city_center", label: "Distance to city centre (miles)", value: (e) => e.features.distance_to_city_center, best: "min", render: (e) => formatNumber(e.features.distance_to_city_center, 1) },
+  { key: "distance_to_city_center", label: "Distance (miles)", value: (e) => e.features.distance_to_city_center, best: "min", render: (e) => formatNumber(e.features.distance_to_city_center, 1) },
   { key: "school_rating", label: "School rating", value: (e) => e.features.school_rating, best: "max", render: (e) => formatNumber(e.features.school_rating, 1) },
 ];
 
