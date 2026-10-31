@@ -1,11 +1,14 @@
 # House Price
 
-A solution for house price prediction and management. The `predict/`
+A solution for house price prediction and management.
+- The `predict/`
 service provides a FastAPI that predicts house prices from a trained
-regression model (linear / non-negative linear / Ridge / Lasso, configurable via `MODEL_TYPE`); the `portal/` service is the Next.js frontend
-(form, validation, results, history, comparison); the `market/` service
+regression model (linear / non-negative linear / Ridge / Lasso, configurable via `MODEL_TYPE`); 
+- the `portal/` service is the Next.js frontend
+(form, validation, results, history, comparison); 
+- the `market/` service
 is the Spring Boot market analysis API (aggregates, what-if, exports).
-`docker-compose.yaml` at this root is the single entry point for running
+- `docker-compose.yaml` at this root is the single entry point for running
 the whole stack.
 
 ## Structure
@@ -74,7 +77,7 @@ docker compose up -d --build   # bake the new artifacts into the image
 ```bash
 make train   # retrain only when train.py or a CSV is newer than the model
 make test    # run the pytest suite
-make up / make down / make logs
+make up / down / logs
 ```
 
 Host ports and other per-service settings are configurable via `.env` at
@@ -84,6 +87,26 @@ this root (copy `.env.example` to `.env` and adjust).
 
 | Service | Description | Where to look |
 |---------|-------------|---------------|
-| `api`    | House price prediction API (FastAPI) — also App 1's Python backend | [`predict/README.md`](predict/README.md) |
+| `api`    | House price prediction API (FastAPI) — Python backend | [`predict/README.md`](predict/README.md) |
 | `market-api` | Property market analysis API (Spring Boot / Java) | [`market/README.md`](market/README.md) |
 | `portal` | Unified Next.js portal: estimator + market dashboard | [`portal/README.md`](portal/README.md) |
+
+## Screenshots
+
+* Estimate Property
+![Estimate](./screenshots/estimate.png)
+
+* Estimate History
+![History](./screenshots/history.png)
+
+* Compare Properties
+![Compare](./screenshots/compare.png)
+
+* Market analyze
+![Market](./screenshots/market.png)
+
+* What-if analyze
+![What-If](./screenshots/what-if.png)
+
+* Predict model
+![Model](./screenshots/model.png)
