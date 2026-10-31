@@ -15,10 +15,10 @@ the whole stack.
 ├── docker-compose.yaml     # orchestrates all services (single command start)
 ├── Makefile                # local workflow helpers (train / test / up / down / logs)
 ├── .env.example            # compose interpolation vars (copy to .env)
-├── predict/                # Task 1: house price prediction API (FastAPI) — also App 1's Python backend
+├── predict/                # house price prediction API (FastAPI) — also App 1's Python backend
 │   ├── Dockerfile          # builds the image; trains the model if artifacts are missing
 │   └── README.md           # API details: endpoints, validation rules, local dev
-├── market/                 # App 2 backend: market analysis API (Spring Boot 3.4.4 / Java 21)
+├── market/                 # market analysis API (Spring Boot 3.4.4 / Java 21)
 │   ├── Dockerfile          # multi-stage Maven build → JRE image
 │   └── README.md           # endpoints, filters, configuration
 └── portal/                 # frontend (Next.js App Router, Tailwind, Recharts)
@@ -26,14 +26,17 @@ the whole stack.
     └── README.md           # portal details: pages, proxy routes, validation
 ```
 
-**Backend roles**: App 1 (estimator) has no separate Python service — the
-Task 1 FastAPI container *is* its Python backend: the portal submits forms
+**Backend roles**:
+* Predict has no separate Python service — the
+FastAPI container *is* its Python backend: the portal submits forms
 to `POST /api/v1/predict`, which validates and predicts (see
-`portal/README.md`). App 2's backend is the Java `market/` service, which
+`portal/README.md`).
+* Market backend is the Java `market/` service, which
 calls the same ML container for what-if analysis.
 
-**Interactive docs**: Task 1 API → http://localhost:8000/docs ·
-market-api (springdoc) → http://localhost:8080/swagger-ui.html
+**Interactive docs**: 
+* Predict API → http://localhost:8000/docs 
+* Market API (springdoc) → http://localhost:8080/swagger-ui.html
 
 ## Quickstart
 
