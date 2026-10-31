@@ -53,8 +53,10 @@ function baselineValueOf(feature: FieldName, values: FeatureValues): string {
  * What-if analysis tool (a.iii): a baseline house plus scenarios that
  * change one feature each. The batch is predicted by the Task 1 model via
  * the market-api; outcomes show the new price and the delta vs baseline.
+ * `context` renders between the header and the form (server-rendered,
+ * e.g. the model coefficients).
  */
-export default function WhatIfView() {
+export default function WhatIfView({ context }: { context?: React.ReactNode }) {
   const [baseline, setBaseline] = useState<FeatureValues>(BASELINE_DEFAULTS);
   const [baselineErrors, setBaselineErrors] = useState<ValidationErrors>({});
   const [scenarios, setScenarios] = useState<ScenarioForm[]>([createScenario()]);
@@ -169,6 +171,8 @@ export default function WhatIfView() {
           ← Back to market
         </Link>
       </header>
+
+      {context && <div className="mt-4">{context}</div>}
 
       <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
         <div className="rounded-lg border border-hairline bg-surface p-5">

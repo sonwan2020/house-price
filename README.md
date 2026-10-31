@@ -2,7 +2,7 @@
 
 A solution for house price prediction and management. The `predict/`
 service provides a FastAPI that predicts house prices from a trained
-linear-regression model; the `portal/` service is the Next.js frontend
+regression model (linear / non-negative linear / Ridge / Lasso, configurable via `MODEL_TYPE`); the `portal/` service is the Next.js frontend
 (form, validation, results, history, comparison); the `market/` service
 is the Spring Boot market analysis API (aggregates, what-if, exports).
 `docker-compose.yaml` at this root is the single entry point for running

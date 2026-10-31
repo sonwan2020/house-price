@@ -42,10 +42,14 @@ def test_model_info(client):
     response = client.get("/api/v1/model-info")
     assert response.status_code == 200
     body = response.json()
-    assert body["model"] == "LinearRegression"
+    # The artifact is configurable (linear | linear_positive | ridge |
+    # lasso, with optional dropped features), so accept any trainable type
+    # and whatever feature set the model was trained on.
+    assert body["model"] in {"LinearRegression", "LinearRegression (positive)", "Ridge", "Lasso"}
     assert body["target"] == "price"
     assert isinstance(body["coefficients"]["intercept"], float)
-    assert len(body["coefficients"]["features"]) == 7
+    assert len(body["coefficients"]["features"]) == len(body["feature_order"])
+    assert len(body["coefficients"]["features"]) >= 1
     assert body["metrics"] is not None
     assert set(body["metrics"]["cv"]) == {"r2", "rmse", "mae", "r2_train"}
 
@@ -66,10 +70,26 @@ def test_predict_all_ok_returns_200(client):
 
 
 def test_predict_price_is_rounded_to_1000(client):
+    """The API must round to the nearest 1000 — exactly as the model does.
+
+    The expected price is computed from the loaded model itself, so the
+    test holds for every trainable model type.
+    """
     response = client.post("/api/v1/predict", json=[valid_item()])
     assert response.status_code == 200
     price = response.json()["predicts"][0]["price"]
-    assert price == 251000
+
+    import pandas as pd
+
+    from app.schemas.predict import FEATURE_ORDER
+
+    model = app.state.model
+    # The model may have been trained on a subset of features
+    # (DROP_FEATURES); predict with exactly the fitted order.
+    order = [str(n) for n in getattr(model, "feature_names_in_", FEATURE_ORDER)]
+    x = pd.DataFrame([[valid_item()[name] for name in order]], columns=order)
+    expected = round(float(model.predict(x)[0]) / 1000) * 1000
+    assert price == expected
     assert price % 1000 == 0
 
 

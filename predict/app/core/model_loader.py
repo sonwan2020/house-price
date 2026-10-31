@@ -6,8 +6,18 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
+
+
+def final_estimator(model: Any) -> Any:
+    """Return the estimator that actually predicts.
+
+    Artifacts are saved as a Pipeline (scaler + model); pre-pipeline
+    artifacts are plain estimators. Both are supported.
+    """
+    return model.named_steps["model"] if isinstance(model, Pipeline) else model
 
 
 def load_model(path: Path) -> Any:
@@ -18,8 +28,8 @@ def load_model(path: Path) -> Any:
     model = joblib.load(path)
     logger.info(
         "Loaded %s with %d coefficients",
-        type(model).__name__,
-        len(model.coef_),
+        type(final_estimator(model)).__name__,
+        len(final_estimator(model).coef_),
     )
     return model
 
