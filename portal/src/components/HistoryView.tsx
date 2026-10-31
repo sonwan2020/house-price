@@ -7,18 +7,21 @@ import { formatNumber, formatPrice } from "@/lib/format";
 import type { HouseFeatures } from "@/lib/types";
 import EmptyState from "./EmptyState";
 
-/** Feature columns of the table, formatted the same way as the compare table. */
+/** Feature columns of the table, formatted the same way as the compare
+ * table. Headers with a unit wrap to two lines: the name on top, the
+ * parenthesised unit below, so columns can stay narrow. */
 const FEATURE_COLUMNS: {
   key: keyof HouseFeatures;
   label: string;
+  unit?: string;
   render: (f: HouseFeatures) => string;
 }[] = [
-  { key: "square_footage", label: "Square footage (sq ft)", render: (f) => formatNumber(f.square_footage) },
+  { key: "square_footage", label: "Square footage", unit: "sq ft", render: (f) => formatNumber(f.square_footage) },
   { key: "bedrooms", label: "Bedrooms", render: (f) => String(f.bedrooms) },
   { key: "bathrooms", label: "Bathrooms", render: (f) => formatNumber(f.bathrooms, 1) },
   { key: "year_built", label: "Year built", render: (f) => String(f.year_built) },
-  { key: "lot_size", label: "Lot size (sq ft)", render: (f) => formatNumber(f.lot_size) },
-  { key: "distance_to_city_center", label: "Distance (miles)", render: (f) => formatNumber(f.distance_to_city_center, 1) },
+  { key: "lot_size", label: "Lot size", unit: "sq ft", render: (f) => formatNumber(f.lot_size) },
+  { key: "distance_to_city_center", label: "Distance", unit: "miles", render: (f) => formatNumber(f.distance_to_city_center, 1) },
   { key: "school_rating", label: "School rating", render: (f) => formatNumber(f.school_rating, 1) },
 ];
 
@@ -84,13 +87,16 @@ export default function HistoryView() {
 
       <div className="mt-6 rounded-lg border border-hairline bg-surface p-5">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-sm">
+          <table className="min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-hairline text-left align-bottom">
                 <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Property</th>
                 {FEATURE_COLUMNS.map((col) => (
-                  <th key={col.key} className="py-2 pr-4 text-xs font-medium text-ink-muted">
-                    {col.label}
+                  <th key={col.key} className="py-2 pr-3 text-xs font-medium text-ink-muted">
+                    <span className="block">{col.label}</span>
+                    {col.unit && (
+                      <span className="block text-[10px] font-normal">({col.unit})</span>
+                    )}
                   </th>
                 ))}
                 <th className="py-2 pr-4 text-xs font-medium text-ink-muted">Estimate price</th>
@@ -106,7 +112,7 @@ export default function HistoryView() {
                       <span className="font-medium text-ink">{entry.label}</span>
                     </td>
                     {FEATURE_COLUMNS.map((col) => (
-                      <td key={col.key} className="py-2 pr-4 tabular-nums text-ink-secondary">
+                      <td key={col.key} className="py-2 pr-3 tabular-nums text-ink-secondary">
                         {col.render(entry.features)}
                       </td>
                     ))}
