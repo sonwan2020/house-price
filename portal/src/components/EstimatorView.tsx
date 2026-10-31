@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, type FormEvent } from "react";
+import { Fragment, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { usePrediction } from "@/hooks/usePrediction";
 import { useHistory } from "@/hooks/useHistory";
 import { newId } from "@/lib/history";
@@ -39,6 +39,12 @@ function createForm(key?: string): PropertyForm {
 /** Field-input classes when the value failed validation. */
 const ERROR_INPUT = "border-critical focus:border-critical focus:ring-critical/25";
 
+/** Controls per column in Tab / Enter order: Name first, then each feature. */
+const FIELD_ORDER: readonly ("label" | FieldName)[] = [
+  "label",
+  ...FIELD_DEFS.map((field) => field.name),
+];
+
 /**
  * The estimator, laid out as a grid: field labels down the left column and
  * one input column per property to the right (add up to 10). An Estimate
@@ -46,6 +52,11 @@ const ERROR_INPUT = "border-critical focus:border-critical focus:ring-critical/2
  * Successful estimates are saved to history automatically.
  * Client-side validation mirrors the backend's rules; property names are
  * optional but must be unique on the page.
+ *
+ * Keyboard flow: Tab or Enter moves through each column's controls — Name,
+ * then every feature — and after the last column's School rating on to Add
+ * property, then Estimate. Enter on Add property appends a column and
+ * focuses its Name input.
  */
 export default function EstimatorView() {
   const { status, response, error, predict } = usePrediction();
@@ -58,8 +69,59 @@ export default function EstimatorView() {
   // if columns are added or removed afterwards.
   const [pricedKeys, setPricedKeys] = useState<string[]>([]);
 
-  const addForm = () =>
-    setForms((prev) => (prev.length < MAX_PROPERTIES ? [...prev, createForm()] : prev));
+  // Focus bookkeeping for the keyboard flow: every control registers itself
+  // by id, and pendingFocusRef holds the id to focus once it mounts.
+  const fieldRefs = useRef(new Map<string, HTMLInputElement | HTMLSelectElement>());
+  const pendingFocusRef = useRef<string | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const estimateButtonRef = useRef<HTMLButtonElement>(null);
+
+  const registerField = (id: string, el: HTMLInputElement | HTMLSelectElement | null) => {
+    if (el) fieldRefs.current.set(id, el);
+    else fieldRefs.current.delete(id);
+    if (pendingFocusRef.current === id && el) {
+      pendingFocusRef.current = null;
+      el.focus();
+    }
+  };
+
+  /** Add a column to the right and focus its Name input. */
+  const addForm = () => {
+    if (forms.length >= MAX_PROPERTIES) return;
+    const form = createForm();
+    pendingFocusRef.current = `${form.key}-label`;
+    setForms((prev) => (prev.length < MAX_PROPERTIES ? [...prev, form] : prev));
+  };
+
+  /**
+   * Move focus to the next control: the next field in this column, the Name
+   * of the next column, or — after the last column's School rating — Add
+   * property (or Estimate once the page is full).
+   */
+  const focusNext = (key: string, field: "label" | FieldName) => {
+    const index = FIELD_ORDER.indexOf(field);
+    if (index < FIELD_ORDER.length - 1) {
+      fieldRefs.current.get(`${key}-${FIELD_ORDER[index + 1]}`)?.focus();
+      return;
+    }
+    const formIndex = forms.findIndex((f) => f.key === key);
+    const next = forms[formIndex + 1];
+    if (next) {
+      fieldRefs.current.get(`${next.key}-label`)?.focus();
+      return;
+    }
+    (addButtonRef.current ?? estimateButtonRef.current)?.focus();
+  };
+
+  /** Enter advances to the next control like Tab; it never submits the form. */
+  const advanceOnEnter =
+    (key: string, field: "label" | FieldName) =>
+    (event: KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        focusNext(key, field);
+      }
+    };
 
   const removeForm = (key: string) =>
     setForms((prev) => (prev.length > 1 ? prev.filter((f) => f.key !== key) : prev));
@@ -98,6 +160,13 @@ export default function EstimatorView() {
     );
     return duplicate ? "Names must be unique." : undefined;
   };
+
+  /** At least one column fully valid — Estimate stays disabled without it. */
+  const hasValidProperty = forms.some(
+    (form) =>
+      Object.keys(validateFeatures(form.values)).length === 0 &&
+      !nameError(form.key, form.label),
+  );
 
   const setLabel = (key: string, label: string) => {
     setForms((prev) =>
@@ -153,7 +222,8 @@ export default function EstimatorView() {
   // Name row, one row per feature, then the Estimate price row. The label
   // column is rendered first and each property's cells are grouped by
   // column, so the DOM — and therefore keyboard tab order — runs
-  // top-to-bottom per property column.
+  // top-to-bottom per property column, then Add property and Estimate.
+  // Remove stays out of tab order so the flow matches Enter navigation.
   const firstRow = forms.length > 1 ? 2 : 1;
   const fieldRow = (i: number) => firstRow + 1 + i;
   const priceRow = firstRow + 1 + FIELD_DEFS.length;
@@ -162,19 +232,12 @@ export default function EstimatorView() {
   return (
     <div className="space-y-6">
       <section className="rounded-lg border border-hairline bg-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Estimate a property</h2>
-            <p className="mt-1 text-sm text-ink-secondary">
-              Fill in the details below. The form validates them before they are sent to
-              the prediction API — you can estimate up to {MAX_PROPERTIES} properties at once.
-            </p>
-          </div>
-          {forms.length < MAX_PROPERTIES && (
-            <button type="button" onClick={addForm} className="btn-secondary text-sm">
-              + Add property
-            </button>
-          )}
+        <div>
+          <h2 className="text-lg font-semibold text-ink">Estimate a property</h2>
+          <p className="mt-1 text-sm text-ink-secondary">
+            Fill in the details below. The form validates them before they are sent to
+            the prediction API — you can estimate up to {MAX_PROPERTIES} properties at once.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
@@ -185,7 +248,7 @@ export default function EstimatorView() {
             >
               {/* Left label column (not focusable, so it stays out of tab order). */}
               <div className="pt-2 text-sm font-medium text-ink" style={cell(1, firstRow)}>
-                Name <span className="text-ink-muted">(optional)</span>
+                Name
               </div>
               {FIELD_DEFS.map((field, i) => (
                 <div
@@ -214,6 +277,7 @@ export default function EstimatorView() {
                           type="button"
                           onClick={() => removeForm(form.key)}
                           aria-label={`Remove property ${index + 1}`}
+                          tabIndex={-1}
                           className="text-xs text-ink-muted underline transition-colors hover:text-critical"
                         >
                           Remove
@@ -224,12 +288,14 @@ export default function EstimatorView() {
                     <div className="min-w-0" style={cell(column, firstRow)}>
                       <input
                         id={`${form.key}-label`}
+                        ref={(el) => registerField(`${form.key}-label`, el)}
                         type="text"
                         value={form.label}
                         maxLength={40}
                         placeholder={`Property ${index + 1}`}
                         onChange={(e) => setLabel(form.key, e.target.value)}
                         onBlur={() => validateLabel(form.key)}
+                        onKeyDown={advanceOnEnter(form.key, "label")}
                         aria-invalid={Boolean(form.labelError)}
                         aria-describedby={form.labelError ? `${form.key}-label-error` : undefined}
                         className={`field-input ${form.labelError ? ERROR_INPUT : ""}`}
@@ -250,9 +316,11 @@ export default function EstimatorView() {
                         {field.select ? (
                           <select
                             id={`${form.key}-${field.name}`}
+                            ref={(el) => registerField(`${form.key}-${field.name}`, el)}
                             value={form.values[field.name]}
                             onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
                             onBlur={() => validateField(form.key, field.name)}
+                            onKeyDown={advanceOnEnter(form.key, field.name)}
                             aria-label={`${field.label} for property ${index + 1}`}
                             aria-invalid={Boolean(form.errors[field.name])}
                             aria-describedby={
@@ -273,6 +341,7 @@ export default function EstimatorView() {
                         ) : (
                           <input
                             id={`${form.key}-${field.name}`}
+                            ref={(el) => registerField(`${form.key}-${field.name}`, el)}
                             type="number"
                             inputMode="decimal"
                             step={field.step}
@@ -281,6 +350,7 @@ export default function EstimatorView() {
                             value={form.values[field.name]}
                             onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
                             onBlur={() => validateField(form.key, field.name)}
+                            onKeyDown={advanceOnEnter(form.key, field.name)}
                             aria-label={`${field.label} for property ${index + 1}`}
                             aria-invalid={Boolean(form.errors[field.name])}
                             aria-describedby={
@@ -323,7 +393,22 @@ export default function EstimatorView() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={status === "loading"} className="btn-primary">
+            {forms.length < MAX_PROPERTIES && (
+              <button
+                type="button"
+                ref={addButtonRef}
+                onClick={addForm}
+                className="btn-secondary text-sm"
+              >
+                + Add property
+              </button>
+            )}
+            <button
+              type="submit"
+              ref={estimateButtonRef}
+              disabled={status === "loading" || !hasValidProperty}
+              className="btn-primary"
+            >
               {status === "loading" ? "Estimating…" : "Estimate"}
             </button>
             {forms.length > 1 && (
