@@ -1,11 +1,13 @@
 /** Formatting helpers shared across the portal. */
 
-/** $251,000-style currency, no decimals (prices are already rounded to 1000s). */
-export function formatPrice(value: number): string {
+/** $251,000-style currency; defaults to no decimals (prices are already
+ *  rounded to 1000s), pass fractionDigits to show decimals (e.g. 1 → $8,643.6). */
+export function formatPrice(value: number, fractionDigits = 0): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(value);
 }
 

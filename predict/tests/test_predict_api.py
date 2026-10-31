@@ -51,7 +51,15 @@ def test_model_info(client):
     assert len(body["coefficients"]["features"]) == len(body["feature_order"])
     assert len(body["coefficients"]["features"]) >= 1
     assert body["metrics"] is not None
-    assert set(body["metrics"]["cv"]) == {"r2", "rmse", "mae", "r2_train"}
+    assert set(body["metrics"]["cv"]) == {"r2", "mae", "rmse"}
+    # The API rounds the raw artifact values for display: r2 to 3 decimals,
+    # mae/rmse to 1 decimal, and every coefficient to 0.1.
+    cv = body["metrics"]["cv"]
+    assert cv["r2"] == round(cv["r2"], 3)
+    assert cv["mae"] == round(cv["mae"], 1)
+    assert cv["rmse"] == round(cv["rmse"], 1)
+    assert all(coef == round(coef, 1) for coef in body["coefficients"]["features"].values())
+    assert body["coefficients"]["intercept"] == round(body["coefficients"]["intercept"], 1)
 
 
 def test_predict_all_ok_returns_200(client):
