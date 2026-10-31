@@ -169,18 +169,15 @@ def evaluate_model(
             "rmse": "neg_root_mean_squared_error",
             "mae": "neg_mean_absolute_error",
         },
-        return_train_score=True,
     )
     metrics = {
         "r2": float(cv["test_r2"].mean()),
-        "rmse": float(-cv["test_rmse"].mean()),
         "mae": float(-cv["test_mae"].mean()),
-        "r2_train": float(cv["train_r2"].mean()),
+        "rmse": float(-cv["test_rmse"].mean()),
     }
-    print("CV R2   (val):", metrics["r2"])
+    print("CV R2  (val):", metrics["r2"])
+    print("CV MAE (val):", metrics["mae"])
     print("CV RMSE (val):", metrics["rmse"])
-    print("CV MAE  (val):", metrics["mae"])
-    print("CV R2   (train):", metrics["r2_train"])
     return metrics
 
 

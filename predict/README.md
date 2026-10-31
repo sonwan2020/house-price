@@ -216,6 +216,8 @@ Error codes embedded in `reason`: `NOT_OBJECT`, `MISSING_FIELD`,
 
 Returns the model coefficients (intercept + per-feature) and the
 cross-validation performance metrics saved by `scripts/train.py`.
+Values are rounded for display: coefficients to 0.1, cv `r2` to 0.001,
+and cv `mae`/`rmse` to 0.1 (the artifacts keep full precision).
 
 ### GET `/api/health`
 

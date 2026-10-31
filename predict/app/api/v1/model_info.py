@@ -28,9 +28,29 @@ def _coefficients(model: Any) -> tuple[float, list[float]]:
     return float(model.intercept_), [float(c) for c in model.coef_]
 
 
+def _rounded_cv(metrics: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Round the cross-validation metrics for display.
+
+    r2 is rounded to 3 decimals (0.001), mae and rmse to 1 decimal (0.1).
+    The artifacts keep full precision; only the API response is rounded.
+    """
+    if not metrics or not isinstance(metrics.get("cv"), dict):
+        return metrics
+    cv = metrics["cv"]
+    rounded = dict(cv)
+    for key, ndigits in (("r2", 3), ("mae", 1), ("rmse", 1)):
+        if cv.get(key) is not None:
+            rounded[key] = round(float(cv[key]), ndigits)
+    return {**metrics, "cv": rounded}
+
+
 @router.get("/model-info", summary="Model coefficients and performance metrics")
 def model_info(request: Request) -> dict[str, Any]:
-    """Return the loaded model's coefficients and training metrics."""
+    """Return the loaded model's coefficients and training metrics.
+
+    Coefficients are rounded to 0.1 for display; cv metrics are rounded
+    per _rounded_cv (r2 to 0.001, mae/rmse to 0.1).
+    """
     model = request.app.state.model
     order = [str(n) for n in getattr(model, "feature_names_in_", FEATURE_ORDER)]
     intercept, coefficients = _coefficients(model)
@@ -43,8 +63,8 @@ def model_info(request: Request) -> dict[str, Any]:
         "target": "price",
         "feature_order": order,
         "coefficients": {
-            "intercept": intercept,
-            "features": {name: coef for name, coef in zip(order, coefficients)},
+            "intercept": round(intercept, 1),
+            "features": {name: round(coef, 1) for name, coef in zip(order, coefficients)},
         },
-        "metrics": request.app.state.metrics,
+        "metrics": _rounded_cv(request.app.state.metrics),
     }

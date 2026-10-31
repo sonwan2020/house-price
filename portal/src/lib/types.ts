@@ -46,9 +46,8 @@ export interface ModelMetrics {
   features?: string[];
   cv?: {
     r2?: number;
-    rmse?: number;
     mae?: number;
-    r2_train?: number;
+    rmse?: number;
   };
 }
 
