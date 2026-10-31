@@ -40,11 +40,26 @@ def test_all_valid_items_are_predicted(predictor):
     assert outcome.results[1].id == "house-1"
 
 
-def test_price_matches_training_run(predictor):
-    # First row of Test Data For Prediction.csv in scripts/train.py output:
-    # 250879.73 rounded to the nearest 1000.
-    outcome = predictor.predict_many([valid_item()])
-    assert outcome.results[0].price == 251000
+def test_price_matches_model_rounded_to_1000(predictor):
+    """The predictor must round to the nearest 1000 — exactly as the model does.
+
+    The expected price is computed from the loaded model, so the test
+    holds for every trainable model type (linear | ridge | lasso).
+    """
+    import pandas as pd
+
+    from app.schemas.predict import FEATURE_ORDER
+
+    item = valid_item()
+    model = joblib.load(settings.model_path)
+    # The model may have been trained on a subset of features
+    # (DROP_FEATURES); predict with exactly the fitted order.
+    order = [str(n) for n in getattr(model, "feature_names_in_", FEATURE_ORDER)]
+    x = pd.DataFrame([[item[name] for name in order]], columns=order)
+    expected = round(float(model.predict(x)[0]) / 1000) * 1000
+
+    outcome = predictor.predict_many([item])
+    assert outcome.results[0].price == expected
     assert isinstance(outcome.results[0].price, int)
 
 

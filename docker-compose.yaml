@@ -8,6 +8,11 @@
 # Fresh clone? The image build trains the model automatically when
 # app/models/house_price_model.joblib is missing (two-stage Dockerfile).
 #
+# The regression model is configurable via MODEL_TYPE (linear |
+# linear_positive | ridge | lasso) and DROP_FEATURES (comma-separated
+# features to exclude); defaults: linear_positive without lot_size.
+# See .env.example and predict/README.md ("Model selection").
+#
 # Retrain after changing the training data (persists to the host, then
 # rebuild to bake the new artifacts into the image):
 #   docker compose run --rm --user root \
@@ -16,7 +21,7 @@
 #   docker compose up -d --build
 #
 # Compose interpolates ${VAR:-default} from ./.env at the repo root, so
-# local overrides (API_PORT, MODEL_VERSION) live there.
+# local overrides (API_PORT, MODEL_VERSION, MODEL_TYPE, DROP_FEATURES) live there.
 #
 # Adding a service later (database, worker, frontend, ...): add a sibling
 # entry under `services:` with an `image:` tag, a `build:` context pointing
@@ -31,6 +36,12 @@ services:
     build:
       context: ./predict
       dockerfile: Dockerfile
+      args:
+        # Regression model trained into the image: linear | linear_positive |
+        # ridge | lasso. linear_positive (non-negative OLS) without lot_size
+        # was chosen for the dataset's collinearity — see predict/README.md.
+        MODEL_TYPE: ${MODEL_TYPE:-linear_positive}
+        DROP_FEATURES: ${DROP_FEATURES:-lot_size}
     image: house-price-api:latest
     container_name: house-price-api
     ports:
@@ -38,6 +49,9 @@ services:
     environment:
       # Reported by GET /api/v1/model-info; bump after retraining.
       MODEL_VERSION: ${MODEL_VERSION:-1.0}
+      # Used by the on-demand retrain command (docker compose run ... train.py).
+      MODEL_TYPE: ${MODEL_TYPE:-linear_positive}
+      DROP_FEATURES: ${DROP_FEATURES:-lot_size}
     # The Dockerfile's HEALTHCHECK is inherited, so later services can
     # depend on `api: {condition: service_healthy}`.
     restart: unless-stopped
