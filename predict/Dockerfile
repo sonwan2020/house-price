@@ -17,10 +17,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM base AS trainer
 
 # Regression model trained by this stage: linear | linear_positive | ridge | lasso.
-ARG MODEL_TYPE=ridge
+ARG MODEL_TYPE=linear_positive
 ENV MODEL_TYPE=${MODEL_TYPE}
 # Comma-separated features to exclude from training (e.g. collinear columns).
-ARG DROP_FEATURES=""
+ARG DROP_FEATURES="square_footage"
 ENV DROP_FEATURES=${DROP_FEATURES}
 
 COPY app ./app

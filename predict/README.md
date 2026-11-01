@@ -82,7 +82,7 @@ The regression model is configurable: `linear` (plain OLS),
 pipeline + one-standard-error alpha selection). Features can be excluded
 with `DROP_FEATURES` (comma-separated) / `--drop-features`. Choose the
 model via the `MODEL_TYPE` env var (Compose default: `linear_positive`
-without `lot_size`) or `--model` directly. `GET /api/v1/model-info`
+without `square_footage`) or `--model` directly. `GET /api/v1/model-info`
 reports the trained model type, positivity and alpha.
 
 ## Model selection
@@ -92,28 +92,42 @@ perfectly collinear (e.g. `square_footage` ↔ `lot_size` = 0.99, and every
 feature correlates ≥ 0.93 with the others). Under such collinearity plain
 OLS/Ridge split the shared size effect arbitrarily and can produce
 counter-intuitive sign flips (a negative `square_footage` or `year_built`
-coefficient). Experiments over candidate configurations (CV RMSE):
+coefficient). The VIF analysis in `model-analysis.md` identifies
+`square_footage` as the most redundant feature (VIF 212 — the other six
+features explain ~99.5% of its variance), so it is excluded by default.
+`scripts/compare_models.py` trains every model type on the same data and
+prints these tables:
 
-| Configuration | `year_built` | `square_footage` | CV RMSE |
-|---|---|---|---|
-| Ridge (alpha=1) | −446 | +6.7 | 9,827 |
-| non-negative OLS | 0 | 0 | 9,216 |
-| **non-negative OLS, without `lot_size`** (default) | **+120** | 0 | 10,776 |
+|  | intercept | bedrooms | bathrooms | year_built | lot_size | distance_to_city_center | school_rating |
+|---|---|---|---|---|---|---|---|
+| linear | 3,639,459 | −3,556 | 10,963 | −1,895 | 31 | 12,055 | 15,299 |
+| **linear_positive (default)** | **−2,405** | **0** | **9,089** | **0** | **18** | **19,172** | **4,257** |
+| ridge | 608,211 | 2,879 | 16,915 | −346 | 14 | 15,023 | 17,603 |
+| lasso | 3,622,358 | −3,532 | 10,956 | −1,886 | 31 | 12,091 | 15,249 |
 
-The default configuration trades ~10% CV RMSE for a sign-constrained
-solution whose coefficients match domain expectations (no feature lowers
-the price; a newer build year is worth more). The zeroed coefficients are
-feature selection under collinearity: a zero weight means the feature adds
-no measurable information beyond its correlates in the training data —
-not that it is irrelevant to price. See `GET /api/v1/model-info` for the
-deployed model's coefficients.
+|  | alpha | r2 | mae | rmse |
+|---|---|---|---|---|
+| linear | — | 0.984 | 7,156 | 9,211 |
+| **linear_positive (default)** | **—** | **0.985** | **7,537** | **9,216** |
+| ridge | 1 | 0.983 | 8,199 | 9,670 |
+| lasso | 1 | 0.984 | 7,157 | 9,208 |
+
+The default (non-negative OLS without `square_footage`) also has the best
+CV R²/RMSE and avoids sign flips: NNLS pushes the collinear
+`bedrooms`/`year_built` weights to zero instead of letting them flip
+negative, while `distance_to_city_center`, `bathrooms` and `school_rating`
+carry the price signal. The zeroed coefficients are feature selection
+under collinearity: a zero weight means the feature adds no measurable
+information beyond its correlates in the training data — not that it is
+irrelevant to price. See `GET /api/v1/model-info` for the deployed
+model's coefficients.
 
 To retrain explicitly after changing the training data:
 
 ```bash
 docker compose run --rm --user root \
   -v ./predict/app/models:/app/app/models \
-  api python scripts/train.py              # honors MODEL_TYPE (default ridge)
+  api python scripts/train.py              # honors MODEL_TYPE (default linear_positive)
 docker compose up -d --build               # bake the new artifacts into the image
 ```
 
@@ -190,8 +204,8 @@ Features (all required): `square_footage`, `bedrooms`, `bathrooms`,
 `id` is an optional string, echoed back unchanged; defaults to an empty
 string when omitted.
 
-`lot_size` is always required even though the default model is trained
-without it (`DROP_FEATURES=lot_size`, see "Model selection"): the request
+Every feature is always required even though a model may be trained
+without some of them (`DROP_FEATURES`, see "Model selection"): the request
 contract stays the full dataset schema no matter which model variant is
 deployed, and clients don't change when the model does.
 `GET /api/v1/model-info` reports the deployed model's actual feature order.
