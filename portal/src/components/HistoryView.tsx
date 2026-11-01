@@ -21,7 +21,7 @@ const FEATURE_COLUMNS: {
   { key: "bathrooms", label: "Bathrooms", render: (f) => formatNumber(f.bathrooms, 1) },
   { key: "year_built", label: "Year built", render: (f) => String(f.year_built) },
   { key: "lot_size", label: "Lot size", unit: "sq ft", render: (f) => formatNumber(f.lot_size) },
-  { key: "distance_to_city_center", label: "Distance", unit: "miles", render: (f) => formatNumber(f.distance_to_city_center, 1) },
+  { key: "distance_to_city_center", label: "Distance to centre", unit: "miles", render: (f) => formatNumber(f.distance_to_city_center, 1) },
   { key: "school_rating", label: "School rating", render: (f) => formatNumber(f.school_rating, 1) },
 ];
 

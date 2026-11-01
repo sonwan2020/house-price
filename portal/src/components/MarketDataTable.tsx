@@ -11,7 +11,7 @@ const COLUMNS: { key: string; label: string; render: (l: MarketListing) => strin
   { key: "bathrooms", label: "Bathrooms", render: (l) => formatNumber(l.bathrooms, 1) },
   { key: "year_built", label: "Year built", render: (l) => String(l.year_built) },
   { key: "lot_size", label: "Lot size", render: (l) => formatNumber(l.lot_size) },
-  { key: "distance_to_city_center", label: "Distance (miles)", render: (l) => formatNumber(l.distance_to_city_center, 1) },
+  { key: "distance_to_city_center", label: "Distance to centre (miles)", render: (l) => formatNumber(l.distance_to_city_center, 1) },
   { key: "school_rating", label: "School rating", render: (l) => formatNumber(l.school_rating, 1) },
   { key: "price", label: "Price", render: (l) => formatPrice(l.price) },
 ];
