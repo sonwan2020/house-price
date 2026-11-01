@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     #: Tag reported by /model-info; bump when a new model is trained.
-    model_version: str = "1.0"
+    model_version: str = "1.2"
     model_path: Path = BASE_DIR / "app" / "models" / "house_price_model.joblib"
     metrics_path: Path = BASE_DIR / "app" / "models" / "model_metrics.json"
 

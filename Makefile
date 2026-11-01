@@ -4,7 +4,7 @@
 
 # Model defaults mirror docker-compose.yaml so local and Docker demos agree.
 MODEL_TYPE ?= linear_positive
-DROP_FEATURES ?= lot_size
+DROP_FEATURES ?= square_footage
 
 # Retrain only when train.py or a CSV in predict/data/ is newer than the
 # artifact (same freshness check as the Dockerfile trainer stage).

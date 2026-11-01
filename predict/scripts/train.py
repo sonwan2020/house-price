@@ -39,7 +39,8 @@ METRICS_PATH = MODELS_DIR / "model_metrics.json"
 TARGET = "price"
 
 MODEL_TYPES = ("linear", "linear_positive", "ridge", "lasso")
-DEFAULT_MODEL_TYPE = "ridge"
+DEFAULT_MODEL_TYPE = "linear_positive"
+DEFAULT_DROP_FEATURES = "square_footage"
 
 #: Candidate penalty strengths searched for the regularized models.
 ALPHAS = {
@@ -266,10 +267,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--drop-features",
-        default=os.environ.get("DROP_FEATURES", ""),
+        default=os.environ.get("DROP_FEATURES", DEFAULT_DROP_FEATURES),
         help=(
             "comma-separated features to exclude from training "
-            f"(default: '{os.environ.get('DROP_FEATURES', '')}')"
+            f"(default: '{os.environ.get('DROP_FEATURES', DEFAULT_DROP_FEATURES)}')"
         ),
     )
     parser.add_argument(

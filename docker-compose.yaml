@@ -10,7 +10,7 @@
 #
 # The regression model is configurable via MODEL_TYPE (linear |
 # linear_positive | ridge | lasso) and DROP_FEATURES (comma-separated
-# features to exclude); defaults: linear_positive without lot_size.
+# features to exclude); defaults: linear_positive without square_footage.
 # See .env.example and predict/README.md ("Model selection").
 #
 # Retrain after changing the training data (persists to the host, then
@@ -38,20 +38,21 @@ services:
       dockerfile: Dockerfile
       args:
         # Regression model trained into the image: linear | linear_positive |
-        # ridge | lasso. linear_positive (non-negative OLS) without lot_size
-        # was chosen for the dataset's collinearity — see predict/README.md.
+        # ridge | lasso. linear_positive (non-negative OLS) without
+        # square_footage was chosen for the dataset's collinearity — see
+        # predict/README.md and predict/model-analysis.md.
         MODEL_TYPE: ${MODEL_TYPE:-linear_positive}
-        DROP_FEATURES: ${DROP_FEATURES:-lot_size}
+        DROP_FEATURES: ${DROP_FEATURES:-square_footage}
     image: house-price-api:latest
     container_name: house-price-api
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
       # Reported by GET /api/v1/model-info; bump after retraining.
-      MODEL_VERSION: ${MODEL_VERSION:-1.0}
+      MODEL_VERSION: ${MODEL_VERSION:-1.2}
       # Used by the on-demand retrain command (docker compose run ... train.py).
       MODEL_TYPE: ${MODEL_TYPE:-linear_positive}
-      DROP_FEATURES: ${DROP_FEATURES:-lot_size}
+      DROP_FEATURES: ${DROP_FEATURES:-square_footage}
     # The Dockerfile's HEALTHCHECK is inherited, so later services can
     # depend on `api: {condition: service_healthy}`.
     restart: unless-stopped
