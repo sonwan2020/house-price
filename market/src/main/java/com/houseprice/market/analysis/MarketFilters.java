@@ -18,14 +18,14 @@ import org.springframework.http.HttpStatus;
  */
 public record MarketFilters(
     Integer bedrooms,
-    Double minSquareFootage,
-    Double maxSquareFootage,
+    Integer minSquareFootage,
+    Integer maxSquareFootage,
     Double minBathrooms,
     Double maxBathrooms,
     Integer minYearBuilt,
     Integer maxYearBuilt,
-    Double minLotSize,
-    Double maxLotSize,
+    Integer minLotSize,
+    Integer maxLotSize,
     Double maxDistanceToCityCenter,
     Double minSchoolRating,
     Long minPrice,
@@ -39,19 +39,19 @@ public record MarketFilters(
    */
   public void validate() {
     List<String> problems = new ArrayList<>();
-    bounds(problems, "bedrooms", bedrooms, 1d, 20d);
-    bounds(problems, "min_square_footage", minSquareFootage, 0d, 100_000d, true);
-    bounds(problems, "max_square_footage", maxSquareFootage, 0d, 100_000d, true);
-    bounds(problems, "min_bathrooms", minBathrooms, 0d, 20d, true);
-    bounds(problems, "max_bathrooms", maxBathrooms, 0d, 20d, true);
+    bounds(problems, "bedrooms", bedrooms, 1d, 19d);
+    bounds(problems, "min_square_footage", minSquareFootage, 0d, 100_000d, true, true);
+    bounds(problems, "max_square_footage", maxSquareFootage, 0d, 100_000d, true, true);
+    bounds(problems, "min_bathrooms", minBathrooms, 0d, 20d, true, true);
+    bounds(problems, "max_bathrooms", maxBathrooms, 0d, 20d, true, true);
     bounds(problems, "min_year_built", minYearBuilt, 1950d, (double) (LocalDate.now().getYear() + 5));
     bounds(problems, "max_year_built", maxYearBuilt, 1950d, (double) (LocalDate.now().getYear() + 5));
-    bounds(problems, "min_lot_size", minLotSize, 0d, 1_000_000d, true);
-    bounds(problems, "max_lot_size", maxLotSize, 0d, 1_000_000d, true);
-    bounds(problems, "max_distance_to_city_center", maxDistanceToCityCenter, 0d, 1_000d);
+    bounds(problems, "min_lot_size", minLotSize, 0d, 300_000d, true, true);
+    bounds(problems, "max_lot_size", maxLotSize, 0d, 300_000d, true, true);
+    bounds(problems, "max_distance_to_city_center", maxDistanceToCityCenter, 0d, 100d, true, true);
     bounds(problems, "min_school_rating", minSchoolRating, 0d, 10d);
-    bounds(problems, "min_price", minPrice, 0d, null);
-    bounds(problems, "max_price", maxPrice, 0d, null);
+    bounds(problems, "min_price", minPrice, 50_000d, null);
+    bounds(problems, "max_price", maxPrice, 50_000d, null);
     pair(problems, "square_footage", minSquareFootage, maxSquareFootage);
     pair(problems, "bathrooms", minBathrooms, maxBathrooms);
     pair(problems, "year_built", minYearBuilt, maxYearBuilt);
@@ -64,7 +64,7 @@ public record MarketFilters(
 
   private static void bounds(
       List<String> problems, String name, Number value, double min, Double max) {
-    bounds(problems, name, value, min, max, false);
+    bounds(problems, name, value, min, max, false, false);
   }
 
   private static void bounds(
@@ -73,15 +73,16 @@ public record MarketFilters(
       Number value,
       double min,
       Double max,
-      boolean minExclusive) {
+      boolean minExclusive,
+      boolean maxExclusive) {
     if (value == null) {
       return;
     }
     double v = value.doubleValue();
     if (minExclusive ? v <= min : v < min) {
       problems.add(name + " must be " + (minExclusive ? "> " : ">= ") + fmt(min) + ".");
-    } else if (max != null && v > max) {
-      problems.add(name + " must be <= " + fmt(max) + ".");
+    } else if (max != null && (maxExclusive ? v >= max : v > max)) {
+      problems.add(name + " must be " + (maxExclusive ? "< " : "<= ") + fmt(max) + ".");
     }
   }
 

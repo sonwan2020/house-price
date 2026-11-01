@@ -6,7 +6,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { MARKET_API_URL } from "./api";
-import type { AggregatesResponse, MarketInitialData, PropertiesPage } from "./market";
+import type { AggregatesResponse, MarketInitialData, ListingsPage } from "./market";
 
 /** Proxy a JSON market-api endpoint, passing status and body through unchanged. */
 export async function proxyMarketJson(path: string, init?: RequestInit) {
@@ -24,26 +24,26 @@ export async function proxyMarketJson(path: string, init?: RequestInit) {
 /**
  * Server-side fetch of the dashboard's initial data (RSC initial data
  * loading): unfiltered aggregates plus the first page of the default
- * table sort. The property URL must match the query string
+ * table sort. The listings URL must match the query string
  * MarketDashboardView computes on first render so the client can skip
  * re-fetching the data it already received. Throws when the market
  * service is unavailable — the page catches it and lets the client view
  * fetch on its own with its inline error states.
  */
 export async function fetchMarketInitial(): Promise<MarketInitialData> {
-  const [aggregatesRes, propertiesRes] = await Promise.all([
+  const [aggregatesRes, listingsRes] = await Promise.all([
     fetch(`${MARKET_API_URL}/api/v1/market/aggregates`, { cache: "no-store" }),
-    fetch(`${MARKET_API_URL}/api/v1/market/properties?sortBy=price&sortDir=desc&page=0&size=25`, {
+    fetch(`${MARKET_API_URL}/api/v1/market/listings?sortBy=price&sortDir=desc&page=0&size=25`, {
       cache: "no-store",
     }),
   ]);
-  if (!aggregatesRes.ok || !propertiesRes.ok) {
+  if (!aggregatesRes.ok || !listingsRes.ok) {
     throw new Error(
-      `market-api initial fetch failed: aggregates=${aggregatesRes.status} properties=${propertiesRes.status}`,
+      `market-api initial fetch failed: aggregates=${aggregatesRes.status} listings=${listingsRes.status}`,
     );
   }
   return {
     aggregates: (await aggregatesRes.json()) as AggregatesResponse,
-    properties: (await propertiesRes.json()) as PropertiesPage,
+    listings: (await listingsRes.json()) as ListingsPage,
   };
 }

@@ -40,11 +40,11 @@ export interface AggregatesResponse {
 /** Initial dashboard data fetched by the market page's server component. */
 export interface MarketInitialData {
   aggregates: AggregatesResponse;
-  properties: PropertiesPage;
+  listings: ListingsPage;
 }
 
-/** One dataset row as served by GET /api/v1/market/properties. */
-export interface MarketProperty {
+/** One dataset row as served by GET /api/v1/market/listings. */
+export interface MarketListing {
   id: number;
   square_footage: number;
   bedrooms: number;
@@ -56,11 +56,11 @@ export interface MarketProperty {
   price: number;
 }
 
-export interface PropertiesPage {
+export interface ListingsPage {
   total: number;
   page: number;
   size: number;
-  properties: MarketProperty[];
+  listings: MarketListing[];
 }
 
 /** One what-if scenario outcome. */

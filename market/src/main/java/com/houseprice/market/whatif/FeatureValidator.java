@@ -40,22 +40,22 @@ public final class FeatureValidator {
       case "square_footage" -> {
         if (value <= 0) {
           errors.put(name, "must be greater than 0.");
-        } else if (value > 100_000) {
-          errors.put(name, "must be at most 100,000.");
+        } else if (value >= 100_000) {
+          errors.put(name, "must be less than 100,000.");
         }
       }
       case "bedrooms" -> {
         if (value != Math.floor(value)) {
           errors.put(name, "must be a whole number.");
-        } else if (value < 1 || value > 20) {
-          errors.put(name, "must be between 1 and 20.");
+        } else if (value < 1 || value > 19) {
+          errors.put(name, "must be between 1 and 19.");
         }
       }
       case "bathrooms" -> {
         if (value <= 0) {
           errors.put(name, "must be greater than 0.");
-        } else if (value > 20) {
-          errors.put(name, "must be at most 20.");
+        } else if (value >= 20) {
+          errors.put(name, "must be less than 20.");
         }
       }
       case "year_built" -> {
@@ -68,15 +68,15 @@ public final class FeatureValidator {
       case "lot_size" -> {
         if (value <= 0) {
           errors.put(name, "must be greater than 0.");
-        } else if (value > 1_000_000) {
-          errors.put(name, "must be at most 1,000,000.");
+        } else if (value >= 300_000) {
+          errors.put(name, "must be less than 300,000.");
         }
       }
       case "distance_to_city_center" -> {
-        if (value < 0) {
-          errors.put(name, "must be at least 0.");
-        } else if (value > 1_000) {
-          errors.put(name, "must be at most 1,000.");
+        if (value <= 0) {
+          errors.put(name, "must be greater than 0.");
+        } else if (value >= 100) {
+          errors.put(name, "must be less than 100.");
         }
       }
       case "school_rating" -> {

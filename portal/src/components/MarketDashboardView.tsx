@@ -9,7 +9,7 @@ import {
   type AggregatesResponse,
   type MarketFilterState,
   type MarketInitialData,
-  type PropertiesPage,
+  type ListingsPage,
 } from "@/lib/market";
 import MarketDataTable from "./MarketDataTable";
 import PriceBarChart, { type ChartDatum } from "./PriceBarChart";
@@ -160,9 +160,9 @@ export default function MarketDashboardView({
 
   const query = useMemo(() => filtersToQuery(filters), [filters]);
   const aggregatesUrl = useMemo(() => `/api/market/aggregates${query}`, [query]);
-  const propertiesUrl = useMemo(
+  const listingsUrl = useMemo(
     () =>
-      `/api/market/properties${filtersToQuery(filters, {
+      `/api/market/listings${filtersToQuery(filters, {
         sortBy,
         sortDir,
         page,
@@ -175,9 +175,9 @@ export default function MarketDashboardView({
     aggregatesUrl,
     initialData?.aggregates ?? undefined,
   );
-  const properties = useMarketJson<PropertiesPage>(
-    propertiesUrl,
-    initialData?.properties ?? undefined,
+  const listings = useMarketJson<ListingsPage>(
+    listingsUrl,
+    initialData?.listings ?? undefined,
   );
 
   const handleSort = (key: string) => {
@@ -198,7 +198,7 @@ export default function MarketDashboardView({
   const data = aggregates.data;
   const count = data?.count ?? 0;
   const stats: { label: string; value: string }[] = [
-    { label: "Properties", value: data ? String(count) : "—" },
+    { label: "Listings", value: data ? String(count) : "—" },
     {
       label: "Average price",
       value: data?.price ? formatPrice(data.price.mean) : "—",
@@ -333,7 +333,7 @@ export default function MarketDashboardView({
         )}
         {data && count === 0 && (
           <p className="py-16 text-center text-sm text-ink-muted">
-            No properties match the selected filters — adjust or reset them to see the market.
+            No listings match the selected filters — adjust or reset them to see the market.
           </p>
         )}
         {data && count > 0 && (
@@ -384,15 +384,15 @@ export default function MarketDashboardView({
             </a>
           </div>
         </div>
-        {properties.error && (
+        {listings.error && (
           <p role="alert" className="mt-3 text-sm text-critical">
-            ✕ {properties.error}
+            ✕ {listings.error}
           </p>
         )}
         <div className="mt-3">
           <MarketDataTable
-            page={properties.data}
-            loading={properties.loading}
+            page={listings.data}
+            loading={listings.loading}
             sortBy={sortBy}
             sortDir={sortDir}
             onSort={handleSort}

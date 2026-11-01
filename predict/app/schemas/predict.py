@@ -30,19 +30,19 @@ class HouseFeatures(BaseModel):
     """
 
     square_footage: float = Field(
-        description="Total square footage of the house (must be > 0).",
+        description="Total square footage of the house (exclusive: > 0 and < 100,000).",
         gt=0,
-        le=100_000,
+        lt=100_000,
     )
     bedrooms: int = Field(
-        description="Number of bedrooms (integer, 1 to 20).",
-        ge=1,
-        le=20,
+        description="Number of bedrooms (integer, 1 to 19).",
+        gt=0,
+        lt=20,
     )
     bathrooms: float = Field(
-        description="Number of bathrooms (0.5 to 20, half baths allowed).",
+        description="Number of bathrooms (exclusive: > 0 and < 20, half baths allowed).",
         gt=0,
-        le=20,
+        lt=20,
     )
     year_built: int = Field(
         description=f"Year the house was built (integer, 1950 to {CURRENT_YEAR + 5}).",
@@ -50,14 +50,14 @@ class HouseFeatures(BaseModel):
         le=CURRENT_YEAR + 5,
     )
     lot_size: float = Field(
-        description="Lot size in square feet (must be > 0).",
+        description="Lot size in square feet (exclusive: > 0 and < 300,000).",
         gt=0,
-        le=1_000_000,
+        lt=300_000,
     )
     distance_to_city_center: float = Field(
-        description="Distance to the city center in miles (>= 0).",
-        ge=0,
-        le=1_000,
+        description="Distance to the city center in miles (exclusive: > 0 and < 100).",
+        gt=0,
+        lt=100,
     )
     school_rating: float = Field(
         description="School rating (0 to 10).",

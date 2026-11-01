@@ -9,7 +9,7 @@ import java.util.Map;
 import com.houseprice.market.analysis.Aggregates;
 import com.houseprice.market.analysis.MarketAnalysisService;
 import com.houseprice.market.analysis.MarketFilters;
-import com.houseprice.market.analysis.PropertiesPage;
+import com.houseprice.market.analysis.ListingsPage;
 import com.houseprice.market.config.CacheConfig;
 import com.houseprice.market.data.DatasetLoader;
 import com.houseprice.market.data.House;
@@ -82,15 +82,15 @@ public class MarketController {
   }
 
   /** Paged, sorted, filtered dataset rows for the data table (a.v). */
-  @GetMapping("/properties")
-  public PropertiesPage properties(
+  @GetMapping("/listings")
+  public ListingsPage listings(
       MarketFilters filters,
       @RequestParam(defaultValue = "id") String sortBy,
       @RequestParam(defaultValue = "asc") String sortDir,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "50") int size) {
     filters.validate();
-    return analysis.properties(filters, sortBy, sortDir, page, size);
+    return analysis.listings(filters, sortBy, sortDir, page, size);
   }
 
   /** What-if scenarios (a.iii): baseline + changes, predicted by the Task 1 model. */
@@ -110,7 +110,7 @@ public class MarketController {
       List<House> rows = analysis.filtered(filters);
       headers.setContentType(new MediaType("text", "csv", StandardCharsets.UTF_8));
       headers.setContentDisposition(ContentDisposition.attachment()
-          .filename("market-properties-" + LocalDate.now() + ".csv").build());
+          .filename("market-listings-" + LocalDate.now() + ".csv").build());
       return new ResponseEntity<>(csvExporter.toCsv(rows), headers, HttpStatus.OK);
     }
     byte[] pdf = pdfExporter.toPdf(analysis.aggregates(filters));
@@ -163,7 +163,7 @@ public class MarketController {
   public Map<String, Object> reload() {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("status", "reloaded");
-    body.put("properties", loader.reload());
+    body.put("listings", loader.reload());
     return body;
   }
 }

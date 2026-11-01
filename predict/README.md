@@ -197,8 +197,10 @@ deployed, and clients don't change when the model does.
 `GET /api/v1/model-info` reports the deployed model's actual feature order.
 
 Validation per item: all fields required, must be numbers, `bedrooms` /
-`year_built` must be integers, plus sanity ranges (positive footage/lot size,
-`year_built` 1950–current year + 5, `school_rating` 0–10, ...).
+`year_built` must be integers, plus sanity ranges (`square_footage` and
+`lot_size` strictly positive and < 100,000 / < 300,000, `bathrooms` > 0 and
+< 20 with half baths allowed, `bedrooms` integer 1–19, distance > 0 and
+< 100 miles, `year_built` 1950–current year + 5, `school_rating` 0–10, ...).
 
 Status codes:
 
