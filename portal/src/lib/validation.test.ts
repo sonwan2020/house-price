@@ -63,6 +63,50 @@ describe("validateFeatures", () => {
     );
   });
 
+  it("rejects square footage at 100,000 (exclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), square_footage: "100000" }).square_footage).toMatch(
+      /less than 100,000/,
+    );
+  });
+
+  it("accepts 0.5 bathrooms (half baths allowed)", () => {
+    expect(validateFeatures({ ...valid(), bathrooms: "0.5" }).bathrooms).toBeUndefined();
+  });
+
+  it("rejects bathrooms at 20 (exclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), bathrooms: "20" }).bathrooms).toMatch(/less than 20/);
+  });
+
+  it("rejects bedrooms 20 (exclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), bedrooms: "20" }).bedrooms).toMatch(
+      /between 1 and 19/,
+    );
+  });
+
+  it("rejects lot size at 300,000 (exclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), lot_size: "300000" }).lot_size).toMatch(
+      /less than 300,000/,
+    );
+  });
+
+  it("rejects distance at 100 (exclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), distance_to_city_center: "100" }).distance_to_city_center).toMatch(
+      /less than 100/,
+    );
+  });
+
+  it("accepts values just inside the open ranges", () => {
+    expect(
+      validateFeatures({
+        ...valid(),
+        square_footage: "1",
+        bathrooms: "0.5",
+        lot_size: "1",
+        distance_to_city_center: "0.1",
+      }),
+    ).toEqual({});
+  });
+
   it("rejects school rating above 10", () => {
     expect(validateFeatures({ ...valid(), school_rating: "10.5" }).school_rating).toMatch(
       /between 0 and 10/,

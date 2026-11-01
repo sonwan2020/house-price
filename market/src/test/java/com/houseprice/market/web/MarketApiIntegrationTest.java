@@ -44,7 +44,7 @@ class MarketApiIntegrationTest {
     mockMvc.perform(get("/health"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("ok"))
-        .andExpect(jsonPath("$.properties").value(6))
+        .andExpect(jsonPath("$.listings").value(6))
         .andExpect(jsonPath("$.ml").value("ok"));
   }
 
@@ -69,26 +69,33 @@ class MarketApiIntegrationTest {
   }
 
   @Test
-  void propertiesSortAndPage() throws Exception {
-    mockMvc.perform(get("/api/v1/market/properties")
-            .param("sortBy", "price").param("sortDir", "desc").param("size", "2"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(6))
-        .andExpect(jsonPath("$.properties.length()").value(2))
-        .andExpect(jsonPath("$.properties[0].price").value(395000))
-        .andExpect(jsonPath("$.properties[1].price").value(345000));
+  void unknownPathReturns404() throws Exception {
+    mockMvc.perform(get("/api/v1/market/nope"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.detail").value("Not found."));
   }
 
   @Test
-  void propertiesRejectUnknownSort() throws Exception {
-    mockMvc.perform(get("/api/v1/market/properties").param("sortBy", "garages"))
+  void listingsSortAndPage() throws Exception {
+    mockMvc.perform(get("/api/v1/market/listings")
+            .param("sortBy", "price").param("sortDir", "desc").param("size", "2"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(6))
+        .andExpect(jsonPath("$.listings.length()").value(2))
+        .andExpect(jsonPath("$.listings[0].price").value(395000))
+        .andExpect(jsonPath("$.listings[1].price").value(345000));
+  }
+
+  @Test
+  void listingsRejectUnknownSort() throws Exception {
+    mockMvc.perform(get("/api/v1/market/listings").param("sortBy", "garages"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Unknown sort_by")));
   }
 
   @Test
-  void propertiesRejectBadParamType() throws Exception {
-    mockMvc.perform(get("/api/v1/market/properties").param("minYearBuilt", "abc"))
+  void listingsRejectBadParamType() throws Exception {
+    mockMvc.perform(get("/api/v1/market/listings").param("minYearBuilt", "abc"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.detail").value("Validation failed."))
         .andExpect(jsonPath("$.errors.minYearBuilt")
@@ -217,6 +224,6 @@ class MarketApiIntegrationTest {
     mockMvc.perform(post("/api/v1/market/reload"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("reloaded"))
-        .andExpect(jsonPath("$.properties").value(6));
+        .andExpect(jsonPath("$.listings").value(6));
   }
 }

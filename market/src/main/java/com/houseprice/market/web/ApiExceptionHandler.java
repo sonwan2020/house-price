@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** Maps service and binding errors to FastAPI-style {"detail": ...} JSON. */
 @RestControllerAdvice
@@ -44,6 +45,12 @@ public class ApiExceptionHandler {
     body.put("detail", "Validation failed.");
     body.put("errors", errors);
     return ResponseEntity.badRequest().body(body);
+  }
+
+  /** Unmapped paths: keep the 404 instead of the catch-all turning it into a 500. */
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<Map<String, Object>> handleNotFound(NoResourceFoundException exception) {
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("detail", "Not found."));
   }
 
   @ExceptionHandler(Exception.class)

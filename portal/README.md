@@ -54,7 +54,7 @@ portal/
 │   │       ├── health/       #   GET  → liveness probe (Docker HEALTHCHECK)
 │   │       └── market/       #   App 2 proxies → the Java market-api
 │   │           ├── aggregates/  # GET  → GET /api/v1/market/aggregates
-│   │           ├── properties/  # GET  → GET /api/v1/market/properties
+│   │           ├── listings/    # GET  → GET /api/v1/market/listings
 │   │           ├── what-if/     # POST → POST /api/v1/market/what-if
 │   │           └── export/      # GET  → GET /api/v1/market/export?type=csv|pdf
 │   │               └── what-if/ # POST → POST /api/v1/market/export/what-if?type=csv|pdf

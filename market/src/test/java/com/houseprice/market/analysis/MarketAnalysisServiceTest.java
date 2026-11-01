@@ -93,26 +93,26 @@ class MarketAnalysisServiceTest {
   }
 
   @Test
-  void propertiesSortAndPage() {
-    PropertiesPage firstPage = service.properties(NONE, "price", "desc", 0, 2);
+  void listingsSortAndPage() {
+    ListingsPage firstPage = service.listings(NONE, "price", "desc", 0, 2);
     assertThat(firstPage.total()).isEqualTo(6);
-    assertThat(firstPage.properties()).extracting(price -> price.price())
+    assertThat(firstPage.listings()).extracting(price -> price.price())
         .containsExactly(395000L, 345000L);
 
-    PropertiesPage secondPage = service.properties(NONE, "price", "desc", 1, 2);
-    assertThat(secondPage.properties()).extracting(price -> price.price())
+    ListingsPage secondPage = service.listings(NONE, "price", "desc", 1, 2);
+    assertThat(secondPage.listings()).extracting(price -> price.price())
         .containsExactly(265000L, 240000L);
   }
 
   @Test
-  void propertiesRejectUnknownSortAndDir() {
-    assertThatThrownBy(() -> service.properties(NONE, "garages", "asc", 0, 50))
+  void listingsRejectUnknownSortAndDir() {
+    assertThatThrownBy(() -> service.listings(NONE, "garages", "asc", 0, 50))
         .isInstanceOf(ApiException.class)
         .satisfies(e -> {
           assertThat(((ApiException) e).status()).isEqualTo(HttpStatus.BAD_REQUEST);
           assertThat(e.getMessage()).contains("Unknown sort_by");
         });
-    assertThatThrownBy(() -> service.properties(NONE, "price", "sideways", 0, 50))
+    assertThatThrownBy(() -> service.listings(NONE, "price", "sideways", 0, 50))
         .isInstanceOf(ApiException.class)
         .hasMessageContaining("sort_dir");
   }

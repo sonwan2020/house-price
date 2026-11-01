@@ -28,7 +28,7 @@ public class HealthController {
   public Map<String, Object> health() {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("status", "ok");
-    body.put("properties", loader.dataset().size());
+    body.put("listings", loader.dataset().size());
     body.put("ml", mlClient.healthy() ? "ok" : "unreachable");
     return body;
   }

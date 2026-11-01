@@ -6,9 +6,10 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml ./
-RUN mvn -q -B dependency:go-offline
+COPY settings.xml ./
+RUN mvn -q -B -s settings.xml dependency:go-offline
 COPY src ./src
-RUN mvn -B package
+RUN mvn -B -s settings.xml package
 
 # Stage 2: minimal JRE image, non-root user.
 FROM eclipse-temurin:21-jre-alpine AS runtime

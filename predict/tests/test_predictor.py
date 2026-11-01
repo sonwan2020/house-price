@@ -98,6 +98,37 @@ def test_range_violation_fails_with_code(predictor):
     assert "[OUT_OF_RANGE]" in outcome.results[0].reason
 
 
+def test_open_ranges_accept_inside_and_reject_boundaries(predictor):
+    """Feature ranges are open intervals: inside values pass, both ends fail."""
+    ok = predictor.predict_many(
+        [
+            valid_item(square_footage=1),
+            valid_item(bedrooms=19),
+            valid_item(bathrooms=0.5),
+            valid_item(lot_size=1),
+            valid_item(distance_to_city_center=0.1),
+        ]
+    )
+    assert ok.ok_count == 5
+
+    bad = predictor.predict_many(
+        [
+            valid_item(square_footage=0),
+            valid_item(square_footage=100_000),
+            valid_item(bedrooms=0),
+            valid_item(bedrooms=20),
+            valid_item(bathrooms=0),
+            valid_item(bathrooms=20),
+            valid_item(lot_size=0),
+            valid_item(lot_size=300_000),
+            valid_item(distance_to_city_center=0),
+            valid_item(distance_to_city_center=100),
+        ]
+    )
+    assert bad.ok_count == 0
+    assert all("[OUT_OF_RANGE]" in r.reason for r in bad.results)
+
+
 def test_year_built_upper_boundary(predictor):
     """CURRENT_YEAR + x is valid for x <= 5, invalid for x > 5."""
     ok = predictor.predict_many(

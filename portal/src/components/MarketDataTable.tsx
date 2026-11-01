@@ -1,19 +1,19 @@
 "use client";
 
 import { formatNumber, formatPrice } from "@/lib/format";
-import type { MarketProperty, PropertiesPage } from "@/lib/market";
+import type { MarketListing, ListingsPage } from "@/lib/market";
 
 /** Sortable columns; keys match the market-api sort_by values. */
-const COLUMNS: { key: string; label: string; render: (p: MarketProperty) => string }[] = [
-  { key: "id", label: "ID", render: (p) => String(p.id) },
-  { key: "square_footage", label: "Square footage", render: (p) => formatNumber(p.square_footage) },
-  { key: "bedrooms", label: "Bedrooms", render: (p) => String(p.bedrooms) },
-  { key: "bathrooms", label: "Bathrooms", render: (p) => formatNumber(p.bathrooms, 1) },
-  { key: "year_built", label: "Year built", render: (p) => String(p.year_built) },
-  { key: "lot_size", label: "Lot size", render: (p) => formatNumber(p.lot_size) },
-  { key: "distance_to_city_center", label: "Distance (miles)", render: (p) => formatNumber(p.distance_to_city_center, 1) },
-  { key: "school_rating", label: "School rating", render: (p) => formatNumber(p.school_rating, 1) },
-  { key: "price", label: "Price", render: (p) => formatPrice(p.price) },
+const COLUMNS: { key: string; label: string; render: (l: MarketListing) => string }[] = [
+  { key: "id", label: "ID", render: (l) => String(l.id) },
+  { key: "square_footage", label: "Square footage", render: (l) => formatNumber(l.square_footage) },
+  { key: "bedrooms", label: "Bedrooms", render: (l) => String(l.bedrooms) },
+  { key: "bathrooms", label: "Bathrooms", render: (l) => formatNumber(l.bathrooms, 1) },
+  { key: "year_built", label: "Year built", render: (l) => String(l.year_built) },
+  { key: "lot_size", label: "Lot size", render: (l) => formatNumber(l.lot_size) },
+  { key: "distance_to_city_center", label: "Distance (miles)", render: (l) => formatNumber(l.distance_to_city_center, 1) },
+  { key: "school_rating", label: "School rating", render: (l) => formatNumber(l.school_rating, 1) },
+  { key: "price", label: "Price", render: (l) => formatPrice(l.price) },
 ];
 
 const PAGE_SIZES = [10, 25, 50];
@@ -32,7 +32,7 @@ export default function MarketDataTable({
   onPageChange,
   onSizeChange,
 }: {
-  page: PropertiesPage | null;
+  page: ListingsPage | null;
   loading: boolean;
   sortBy: string;
   sortDir: "asc" | "desc";
@@ -41,7 +41,7 @@ export default function MarketDataTable({
   onSizeChange: (size: number) => void;
 }) {
   const total = page?.total ?? 0;
-  const rows = page?.properties ?? [];
+  const rows = page?.listings ?? [];
   const size = page?.size ?? 25;
   const current = page?.page ?? 0;
   const from = total === 0 ? 0 : current * size + 1;
@@ -91,12 +91,12 @@ export default function MarketDataTable({
             {!loading && rows.length === 0 && (
               <tr>
                 <td colSpan={COLUMNS.length} className="py-8 text-center text-sm text-ink-muted">
-                  No properties match the selected filters.
+                  No listings match the selected filters.
                 </td>
               </tr>
             )}
-            {rows.map((property) => (
-              <tr key={property.id} className="border-b border-hairline last:border-0">
+            {rows.map((listing) => (
+              <tr key={listing.id} className="border-b border-hairline last:border-0">
                 {COLUMNS.map((column) => (
                   <td
                     key={column.key}
@@ -104,7 +104,7 @@ export default function MarketDataTable({
                       column.key === "price" ? "text-sm font-semibold text-ink" : "text-ink-secondary"
                     }`}
                   >
-                    {column.render(property)}
+                    {column.render(listing)}
                   </td>
                 ))}
               </tr>
@@ -115,7 +115,7 @@ export default function MarketDataTable({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-ink-muted">
-          {total === 0 ? "0 properties" : `${from}–${to} of ${total} properties`}
+          {total === 0 ? "0 listings" : `${from}–${to} of ${total} listings`}
         </p>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-1.5 text-xs text-ink-secondary">

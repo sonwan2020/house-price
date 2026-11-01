@@ -55,7 +55,7 @@ public class MarketAnalysisService {
   }
 
   /** Filtered, sorted, paged rows for the data table (a.v). */
-  public PropertiesPage properties(MarketFilters filters, String sortBy, String sortDir, int page, int size) {
+  public ListingsPage listings(MarketFilters filters, String sortBy, String sortDir, int page, int size) {
     Comparator<House> sorter = SORTERS.get(sortBy);
     if (sorter == null) {
       throw new ApiException(HttpStatus.BAD_REQUEST,
@@ -74,7 +74,7 @@ public class MarketAnalysisService {
         .toList();
     int from = Math.min(safePage * safeSize, rows.size());
     int to = Math.min(from + safeSize, rows.size());
-    return new PropertiesPage(rows.size(), safePage, safeSize, rows.subList(from, to));
+    return new ListingsPage(rows.size(), safePage, safeSize, rows.subList(from, to));
   }
 
   private static Aggregates.PriceStats priceStats(List<House> rows, ToDoubleFunction<House> value, boolean withTotal) {

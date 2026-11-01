@@ -13,7 +13,7 @@ Interactive docs (springdoc): http://127.0.0.1:8080/swagger-ui.html
 |---|---|---|
 | GET | `/health` | Liveness probe (also the Docker HEALTHCHECK); reports dataset size and ML reachability |
 | GET | `/api/v1/market/aggregates` | Filtered aggregate stats: price stats, price per sq ft, breakdowns by bedrooms / year band / school band / distance band, price histogram |
-| GET | `/api/v1/market/properties` | Paged, sorted, filtered dataset rows (`sortBy`, `sortDir`, `page`, `size`) |
+| GET | `/api/v1/market/listings` | Paged, sorted, filtered dataset rows (`sortBy`, `sortDir`, `page`, `size`) |
 | POST | `/api/v1/market/what-if` | Baseline + scenarios predicted by the ML container; returns per-scenario price and delta vs baseline |
 | GET | `/api/v1/market/export?type=csv\|pdf` | Filtered rows (CSV) or summary sheet (PDF) as a download |
 | POST | `/api/v1/market/export/what-if?type=csv\|pdf` | Saved what-if runs (current run or history) rendered as CSV or PDF |
