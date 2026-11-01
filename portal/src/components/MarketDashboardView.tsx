@@ -21,34 +21,66 @@ const BEDROOM_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 const SCHOOL_OPTIONS = [5, 6, 7, 8, 9];
 const DISTANCE_OPTIONS = [2, 4, 6, 8];
 
-/** Filter input grid shared by all controls. */
-const FILTER_GRID = "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4";
+/** Feature name on the left of each filter line. */
+const FILTER_LABEL = "w-40 shrink-0 text-xs font-medium text-ink-secondary";
 
-function FilterSelect({
+/**
+ * One filter per line: the feature name on the left, the value control(s)
+ * on the right. `operator` renders between them (≥ / ≤) so inclusive
+ * threshold filters read as "School rating ≥ [value]".
+ */
+function FilterRow({
   label,
+  operator,
+  children,
+}: {
+  label: string;
+  operator?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <span className={FILTER_LABEL}>{label}</span>
+      {operator && (
+        <span aria-hidden="true" className="text-sm text-ink-muted">
+          {operator}
+        </span>
+      )}
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
+  );
+}
+
+/** Dropdown bound shown inline on a filter line, e.g. "Bedrooms [Any ▾]". */
+function FilterSelect({
+  ariaLabel,
   value,
   options,
   allLabel,
+  className = "w-24",
   onChange,
 }: {
-  label: string;
+  ariaLabel: string;
   value: string;
   options: number[];
   allLabel: string;
+  className?: string;
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium text-ink-secondary">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)} className="field-input">
-        <option value="">{allLabel}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      aria-label={ariaLabel}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`field-input ${className}`}
+    >
+      <option value="">{allLabel}</option>
+      {options.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -246,69 +278,88 @@ export default function MarketDashboardView({
             Reset
           </button>
         </div>
-        <div className={`${FILTER_GRID} mt-3`}>
-          <FilterSelect
-            label="Bedrooms"
-            value={filters.bedrooms}
-            options={BEDROOM_OPTIONS}
-            allLabel="Any"
-            onChange={(value) => setFilter("bedrooms", value)}
-          />
-          <FilterSelect
-            label="Built from"
-            value={filters.minYearBuilt}
-            options={YEARS}
-            allLabel="Any year"
-            onChange={(value) => setFilter("minYearBuilt", value)}
-          />
-          <FilterSelect
-            label="Built until"
-            value={filters.maxYearBuilt}
-            options={YEARS}
-            allLabel="Any year"
-            onChange={(value) => setFilter("maxYearBuilt", value)}
-          />
-          <FilterSelect
-            label="School rating at least"
-            value={filters.minSchoolRating}
-            options={SCHOOL_OPTIONS}
-            allLabel="Any"
-            onChange={(value) => setFilter("minSchoolRating", value)}
-          />
-          <FilterSelect
-            label="Max distance (miles)"
-            value={filters.maxDistanceToCityCenter}
-            options={DISTANCE_OPTIONS}
-            allLabel="Any"
-            onChange={(value) => setFilter("maxDistanceToCityCenter", value)}
-          />
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-ink-secondary">Min price ($)</span>
+        {/* Single-value filter first, then min-max filters, then inclusive
+            range (threshold) filters — one feature per line. */}
+        <div className="mt-4 space-y-3">
+          <FilterRow label="Bedrooms">
+            <FilterSelect
+              ariaLabel="Bedrooms"
+              value={filters.bedrooms}
+              options={BEDROOM_OPTIONS}
+              allLabel="Any"
+              onChange={(value) => setFilter("bedrooms", value)}
+            />
+          </FilterRow>
+          <FilterRow label="Built year">
+            <FilterSelect
+              ariaLabel="Built from year"
+              value={filters.minYearBuilt}
+              options={YEARS}
+              allLabel="Any year"
+              className="w-32"
+              onChange={(value) => setFilter("minYearBuilt", value)}
+            />
+            <span aria-hidden="true" className="text-sm text-ink-muted">
+              to
+            </span>
+            <FilterSelect
+              ariaLabel="Built to year"
+              value={filters.maxYearBuilt}
+              options={YEARS}
+              allLabel="Any year"
+              className="w-32"
+              onChange={(value) => setFilter("maxYearBuilt", value)}
+            />
+          </FilterRow>
+          <FilterRow label="Price ($)">
             <input
               type="number"
               inputMode="numeric"
               step={1000}
               min={0}
-              placeholder="No minimum"
+              placeholder="Min"
+              aria-label="Minimum price"
               value={filters.minPrice}
               onChange={(e) => setFilter("minPrice", e.target.value)}
-              className="field-input"
+              className="field-input w-28"
             />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-ink-secondary">Max price ($)</span>
+            <span aria-hidden="true" className="text-sm text-ink-muted">
+              to
+            </span>
             <input
               type="number"
               inputMode="numeric"
               step={1000}
               min={0}
-              placeholder="No maximum"
+              placeholder="Max"
+              aria-label="Maximum price"
               value={filters.maxPrice}
               onChange={(e) => setFilter("maxPrice", e.target.value)}
-              className="field-input"
+              className="field-input w-28"
             />
-          </label>
+          </FilterRow>
+          <FilterRow label="School rating" operator="≥">
+            <FilterSelect
+              ariaLabel="Minimum school rating"
+              value={filters.minSchoolRating}
+              options={SCHOOL_OPTIONS}
+              allLabel="Any"
+              onChange={(value) => setFilter("minSchoolRating", value)}
+            />
+          </FilterRow>
+          <FilterRow label="Distance to centre" operator="≤">
+            <FilterSelect
+              ariaLabel="Maximum distance to centre (miles)"
+              value={filters.maxDistanceToCityCenter}
+              options={DISTANCE_OPTIONS}
+              allLabel="Any"
+              onChange={(value) => setFilter("maxDistanceToCityCenter", value)}
+            />
+          </FilterRow>
         </div>
+        <p className="mt-3 text-xs text-ink-muted">
+          All filters are inclusive — the bounds you pick are included in the results.
+        </p>
       </div>
 
       {aggregates.error && (
