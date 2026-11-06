@@ -83,6 +83,44 @@ make up / down / logs
 Host ports and other per-service settings are configurable via `.env` at
 this root (copy `.env.example` to `.env` and adjust).
 
+## Build & test per service
+
+For host-side development (WSL/Linux) — image builds are covered by the
+Quickstart above (`docker compose up -d --build <service>`).
+
+### predict (FastAPI)
+
+Requires a Python venv: `cd predict && python -m venv .venv && .venv/bin/pip install -r requirements.txt`
+
+```bash
+make train   # from the repo root; retrains only when the artifact is stale
+# or: cd predict && .venv/bin/python scripts/train.py
+
+make test     # from the repo root; runs the pytest suite
+# or: cd predict && .venv/bin/python -m pytest
+```
+
+### market (Spring Boot / Java 21)
+
+Requires OpenJDK 21 and Maven on the host (no Maven wrapper):
+
+```bash
+cd market
+mvn test                      # unit + integration tests (ML mocked)
+mvn package -DskipTests       # build the jar (target/market-api.jar)
+```
+
+### portal (Next.js)
+
+Requires Node.js and npm (`npm install` inside `portal/`):
+
+```bash
+cd portal
+npm run build   # next build (includes TypeScript type checking)
+npm run test    # vitest run
+npm run lint    # ESLint
+```
+
 ## Services
 
 | Service | Description | Where to look |
