@@ -4,9 +4,9 @@ import { Fragment, useRef, useState, type FormEvent, type KeyboardEvent } from "
 import { usePrediction } from "@/hooks/usePrediction";
 import { useHistory } from "@/hooks/useHistory";
 import { newId } from "@/lib/history";
-import { formatPrice } from "@/lib/format";
+import { formatNumber, formatPrice } from "@/lib/format";
 import type { HouseInfo, HousePrice } from "@/lib/types";
-import PriceBarChart, { type ChartDatum } from "./PriceBarChart";
+import PriceBarChart, { type ChartDatum, type FeatureLine } from "./PriceBarChart";
 import {
   FIELD_DEFS,
   type FieldName,
@@ -37,6 +37,21 @@ function createForm(key?: string): PropertyForm {
   return { key: key ?? newId(), label: "", values: emptyValues(), errors: {} };
 }
 
+/** One "Label: value" line per feature, formatted for the hover tooltips
+ * on result items ("Square footage: 2,400 sq ft"). Values come from a
+ * validated form, so Number() is safe. Years keep no thousands grouping
+ * ("1998", not "1,998"). */
+function formatFeatureLines(values: FeatureValues): FeatureLine[] {
+  return FIELD_DEFS.map((field) => {
+    const num = Number(values[field.name]);
+    const value =
+      field.name === "year_built"
+        ? String(num)
+        : `${formatNumber(num, field.step === "1" ? 0 : 1)}${field.unit ? ` ${field.unit}` : ""}`;
+    return { label: field.label, value };
+  });
+}
+
 /** Field-input classes when the value failed validation. */
 const ERROR_INPUT = "border-critical focus:border-critical focus:ring-critical/25";
 
@@ -48,8 +63,12 @@ const FIELD_ORDER: readonly ("label" | FieldName)[] = [
 
 /**
  * The estimator, laid out as a grid: field labels down the left column and
- * one input column per property to the right (add up to 10). An Estimate
- * price row at the bottom fills in green after a successful round-trip.
+ * one input column per property to the right (add up to 10), with an
+ * Estimate price row at the bottom. After a successful estimate the grid
+ * locks — inputs become read-only so the visible values always match the
+ * prices pinned beneath them — and "New estimate" clears it for the next
+ * batch. The Results panel below summarises the run; hovering a result
+ * item reveals the features it was estimated from.
  * Successful estimates are saved to history automatically.
  * Client-side validation mirrors the backend's rules; property names are
  * optional but must be unique on the page.
@@ -60,7 +79,7 @@ const FIELD_ORDER: readonly ("label" | FieldName)[] = [
  * focuses its Name input.
  */
 export default function EstimatorView() {
-  const { status, response, error, predict } = usePrediction();
+  const { status, response, error, predict, reset } = usePrediction();
   const history = useHistory();
 
   // The initial column uses a deterministic key so the server-rendered HTML
@@ -69,6 +88,12 @@ export default function EstimatorView() {
   // Column keys as submitted, so each price stays pinned to its column even
   // if columns are added or removed afterwards.
   const [pricedKeys, setPricedKeys] = useState<string[]>([]);
+  // True after a successful round-trip: the grid becomes read-only so the
+  // visible inputs always match the prices pinned beneath them.
+  const [locked, setLocked] = useState(false);
+  // Formatted feature lines of the last submit, keyed by predict index, so
+  // hovering a result item can show the features it was estimated from.
+  const [featureLines, setFeatureLines] = useState<Record<number, FeatureLine[]>>({});
 
   // Focus bookkeeping for the keyboard flow: every control registers itself
   // by id, and pendingFocusRef holds the id to focus once it mounts.
@@ -197,12 +222,25 @@ export default function EstimatorView() {
       if (label) info.id = label;
       return info;
     });
+    // A new run replaces the previous results entirely: clear them first so
+    // a failed request can never leave stale prices pinned to new columns.
+    reset();
     setPricedKeys(validated.map((f) => f.key));
     const data = await predict(items);
 
-    // Save each successful estimate to history automatically; failed
-    // items (price <= 0, with a reason) are not saved.
     if (data) {
+      // Lock the grid so the visible inputs always match the pinned prices,
+      // and keep the submitted features for the result hover tooltips. A
+      // request error leaves the grid editable so the values can be retried.
+      const lines: Record<number, FeatureLine[]> = {};
+      validated.forEach((f, index) => {
+        lines[index] = formatFeatureLines(f.values);
+      });
+      setFeatureLines(lines);
+      setLocked(true);
+
+      // Save each successful estimate to history automatically; failed
+      // items (price <= 0, with a reason) are not saved.
       validated.forEach((f, index) => {
         const result = data.predicts[index];
         if (!result || result.price <= 0) return;
@@ -212,6 +250,12 @@ export default function EstimatorView() {
     }
   };
 
+  /** Property name for a result row: the submitted label or "Property N". */
+  const labelFor = (index: number): string => {
+    const id = response?.predicts[index]?.id;
+    return id || `Property ${index + 1}`;
+  };
+
   /** The result pinned to a column, if this column was part of the last submit. */
   const priceFor = (key: string): HousePrice | undefined => {
     const index = pricedKeys.indexOf(key);
@@ -219,20 +263,27 @@ export default function EstimatorView() {
     return response.predicts[index];
   };
 
-  /** Property name for a result row: the submitted label or "Property N". */
-  const labelFor = (index: number): string => {
-    const id = response?.predicts[index]?.id;
-    return id || `Property ${index + 1}`;
+  /** Unlock and clear the grid for the next batch. The Results panel keeps
+   * showing the last run until the next estimate lands. */
+  const newEstimate = () => {
+    setForms([createForm("property-0")]);
+    setPricedKeys([]);
+    setLocked(false);
   };
 
-  // Results panel inputs: successful predictions (hero figure for one,
-  // bar chart for two or more) plus the per-item failures of the last run.
+  // Inputs freeze while a request is in flight and stay frozen once locked,
+  // so a pinned price can never disagree with the visible values.
+  const frozen = locked || status === "loading";
+
+  // Results panel inputs: successful predictions (bar chart, also for a
+  // single estimate) plus the per-item failures of the last run.
   const succeeded = response?.predicts.filter((p) => p.price > 0) ?? [];
   const failed = response?.predicts.filter((p) => p.price <= 0) ?? [];
   const chartData: ChartDatum[] = succeeded.map((p) => ({
     id: p.id || `property-${p.index}`,
     label: labelFor(p.index),
     value: p.price,
+    features: featureLines[p.index] ?? [],
   }));
 
   // Grid placement: row 1 holds the Remove controls (when shown), then the
@@ -241,7 +292,7 @@ export default function EstimatorView() {
   // column, so the DOM — and therefore keyboard tab order — runs
   // top-to-bottom per property column, then Add property and Estimate.
   // Remove stays out of tab order so the flow matches Enter navigation.
-  const firstRow = forms.length > 1 ? 2 : 1;
+  const firstRow = forms.length > 1 && !locked ? 2 : 1;
   const fieldRow = (i: number) => firstRow + 1 + i;
   const priceRow = firstRow + 1 + FIELD_DEFS.length;
   const cell = (column: number, row: number) => ({ gridColumn: column, gridRow: row });
@@ -280,7 +331,6 @@ export default function EstimatorView() {
               <div className="pt-2 text-sm font-medium text-ink" style={cell(1, priceRow)}>
                 Estimate price
               </div>
-
               {/* One column per property; DOM order = tab order. */}
               {forms.map((form, index) => {
                 const column = index + 2; // column 1 is the labels
@@ -288,7 +338,7 @@ export default function EstimatorView() {
                 const ok = result ? result.price > 0 : false;
                 return (
                   <Fragment key={form.key}>
-                    {forms.length > 1 && (
+                    {forms.length > 1 && !locked && (
                       <div className="flex justify-end" style={cell(column, 1)}>
                         <button
                           type="button"
@@ -310,6 +360,7 @@ export default function EstimatorView() {
                         value={form.label}
                         maxLength={40}
                         placeholder={`Property ${index + 1}`}
+                        readOnly={frozen}
                         onChange={(e) => setLabel(form.key, e.target.value)}
                         onBlur={() => validateLabel(form.key)}
                         onKeyDown={advanceOnEnter(form.key, "label")}
@@ -331,30 +382,45 @@ export default function EstimatorView() {
                     {FIELD_DEFS.map((field, fi) => (
                       <div key={field.name} className="min-w-0" style={cell(column, fieldRow(fi))}>
                         {field.select ? (
-                          <select
-                            id={`${form.key}-${field.name}`}
-                            ref={(el) => registerField(`${form.key}-${field.name}`, el)}
-                            value={form.values[field.name]}
-                            onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
-                            onBlur={() => validateField(form.key, field.name)}
-                            onKeyDown={advanceOnEnter(form.key, field.name)}
-                            aria-label={`${field.label} for property ${index + 1}`}
-                            aria-invalid={Boolean(form.errors[field.name])}
-                            aria-describedby={
-                              form.errors[field.name] ? `${form.key}-${field.name}-error` : undefined
-                            }
-                            className={`field-input ${form.errors[field.name] ? ERROR_INPUT : ""}`}
-                          >
-                            <option value="">Select a year</option>
-                            {Array.from(
-                              { length: field.max - field.min + 1 },
-                              (_, i) => field.min + i,
-                            ).map((year) => (
-                              <option key={year} value={year}>
-                                {year}
-                              </option>
-                            ))}
-                          </select>
+                          frozen ? (
+                            // A locked year renders as plain read-only text:
+                            // selects cannot be readOnly, and a disabled one
+                            // would grey out the recorded value.
+                            <input
+                              id={`${form.key}-${field.name}`}
+                              ref={(el) => registerField(`${form.key}-${field.name}`, el)}
+                              type="text"
+                              value={form.values[field.name]}
+                              readOnly
+                              aria-label={`${field.label} for property ${index + 1}`}
+                              className="field-input"
+                            />
+                          ) : (
+                            <select
+                              id={`${form.key}-${field.name}`}
+                              ref={(el) => registerField(`${form.key}-${field.name}`, el)}
+                              value={form.values[field.name]}
+                              onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
+                              onBlur={() => validateField(form.key, field.name)}
+                              onKeyDown={advanceOnEnter(form.key, field.name)}
+                              aria-label={`${field.label} for property ${index + 1}`}
+                              aria-invalid={Boolean(form.errors[field.name])}
+                              aria-describedby={
+                                form.errors[field.name] ? `${form.key}-${field.name}-error` : undefined
+                              }
+                              className={`field-input ${form.errors[field.name] ? ERROR_INPUT : ""}`}
+                            >
+                              <option value="">Select a year</option>
+                              {Array.from(
+                                { length: field.max - field.min + 1 },
+                                (_, i) => field.min + i,
+                              ).map((year) => (
+                                <option key={year} value={year}>
+                                  {year}
+                                </option>
+                              ))}
+                            </select>
+                          )
                         ) : (
                           <input
                             id={`${form.key}-${field.name}`}
@@ -365,6 +431,7 @@ export default function EstimatorView() {
                             min={field.min}
                             max={field.max}
                             value={form.values[field.name]}
+                            readOnly={frozen}
                             onChange={(e) => setFieldValue(form.key, field.name, e.target.value)}
                             onBlur={() => validateField(form.key, field.name)}
                             onKeyDown={advanceOnEnter(form.key, field.name)}
@@ -390,7 +457,9 @@ export default function EstimatorView() {
                       </div>
                     ))}
 
-                    {/* Estimate price: always visible, filled in green after Estimate. */}
+                    {/* Estimate price: always visible, filled in green after
+                        Estimate. The grid then locks, so input and price stay
+                        in sync until "New estimate" clears the table. */}
                     <div className="min-w-0 pt-2" style={cell(column, priceRow)} aria-live="polite">
                       {ok && result ? (
                         <p className="text-sm font-semibold text-good-ink">
@@ -410,26 +479,39 @@ export default function EstimatorView() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            {forms.length < MAX_PROPERTIES && (
-              <button
-                type="button"
-                ref={addButtonRef}
-                onClick={addForm}
-                className="btn-secondary text-sm"
-              >
-                + Add property
-              </button>
-            )}
-            <button
-              type="submit"
-              ref={estimateButtonRef}
-              disabled={status === "loading" || !hasValidProperty}
-              className="btn-primary"
-            >
-              {status === "loading" ? "Estimating…" : "Estimate"}
-            </button>
-            {forms.length > 1 && (
-              <span className="text-xs text-ink-muted">Batch of {forms.length} properties</span>
+            {locked ? (
+              <>
+                <button type="button" onClick={newEstimate} className="btn-primary">
+                  New estimate
+                </button>
+                <span className="text-xs text-ink-muted">
+                  Table locked — start a new estimate to make changes.
+                </span>
+              </>
+            ) : (
+              <>
+                {forms.length < MAX_PROPERTIES && (
+                  <button
+                    type="button"
+                    ref={addButtonRef}
+                    onClick={addForm}
+                    className="btn-secondary text-sm"
+                  >
+                    + Add property
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  ref={estimateButtonRef}
+                  disabled={status === "loading" || !hasValidProperty}
+                  className="btn-primary"
+                >
+                  {status === "loading" ? "Estimating…" : "Estimate"}
+                </button>
+                {forms.length > 1 && (
+                  <span className="text-xs text-ink-muted">Batch of {forms.length} properties</span>
+                )}
+              </>
             )}
           </div>
         </form>
@@ -444,8 +526,9 @@ export default function EstimatorView() {
         )}
       </section>
 
-      {/* Results panel: summary chips, then a hero figure for a single
-          estimate or a bar chart for a batch, plus failure reasons. */}
+      {/* Results panel: summary chips, a bar chart of the estimates (also
+          for a single one, so the bar always rises from 0), plus failure
+          reasons. Hovering a result item shows its features. */}
       {status === "success" && response && (
         <section className="fade-in-up rounded-lg border border-hairline bg-surface p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -459,18 +542,7 @@ export default function EstimatorView() {
             </div>
           </div>
 
-          {succeeded.length === 1 && (
-            <div className="mt-4 rounded-md border border-hairline bg-page px-4 py-6 text-center">
-              <p className="text-xs font-medium text-ink-muted">
-                Estimated price · {labelFor(succeeded[0].index)}
-              </p>
-              <p className="mt-2 text-4xl font-semibold tabular-nums text-good-ink">
-                {formatPrice(succeeded[0].price)}
-              </p>
-            </div>
-          )}
-
-          {succeeded.length >= 2 && (
+          {succeeded.length >= 1 && (
             <div className="mt-4">
               <PriceBarChart data={chartData} metricLabel="Estimated price" />
             </div>
@@ -480,12 +552,30 @@ export default function EstimatorView() {
             <div className="mt-4">
               <h3 className="text-sm font-semibold text-ink">Not estimated</h3>
               <ul className="mt-2 space-y-1 text-sm text-ink-secondary">
-                {failed.map((p) => (
-                  <li key={p.index}>
-                    <span className="font-medium text-ink">{labelFor(p.index)}</span>
-                    {p.reason ? ` — ${p.reason}` : ""}
-                  </li>
-                ))}
+                {failed.map((p) => {
+                  const features = featureLines[p.index];
+                  return (
+                    <li key={p.index}>
+                      <span className="group relative inline-flex font-medium text-ink">
+                        {labelFor(p.index)}
+                        {features && features.length > 0 && (
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-60 rounded-md bg-ink px-3 py-2 text-xs font-normal leading-relaxed text-page shadow-lg group-hover:block"
+                          >
+                            {features.map((feature) => (
+                              <span key={feature.label} className="block">
+                                <span className="text-page/60">{feature.label}: </span>
+                                <span className="tabular-nums">{feature.value}</span>
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                      </span>
+                      {p.reason ? ` — ${p.reason}` : ""}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}

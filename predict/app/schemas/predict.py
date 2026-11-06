@@ -35,9 +35,9 @@ class HouseFeatures(BaseModel):
         lt=100_000,
     )
     bedrooms: int = Field(
-        description="Number of bedrooms (integer, 1 to 19).",
+        description="Number of bedrooms (integer, 1 to 20).",
         gt=0,
-        lt=20,
+        le=20,
     )
     bathrooms: float = Field(
         description="Number of bathrooms (exclusive: > 0 and < 20, half baths allowed).",

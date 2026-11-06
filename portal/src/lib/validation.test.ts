@@ -77,9 +77,13 @@ describe("validateFeatures", () => {
     expect(validateFeatures({ ...valid(), bathrooms: "20" }).bathrooms).toMatch(/less than 20/);
   });
 
-  it("rejects bedrooms 20 (exclusive maximum)", () => {
-    expect(validateFeatures({ ...valid(), bedrooms: "20" }).bedrooms).toMatch(
-      /between 1 and 19/,
+  it("accepts bedrooms 20 (inclusive maximum)", () => {
+    expect(validateFeatures({ ...valid(), bedrooms: "20" }).bedrooms).toBeUndefined();
+  });
+
+  it("rejects bedrooms 21", () => {
+    expect(validateFeatures({ ...valid(), bedrooms: "21" }).bedrooms).toMatch(
+      /between 1 and 20/,
     );
   });
 

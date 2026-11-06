@@ -213,7 +213,7 @@ deployed, and clients don't change when the model does.
 Validation per item: all fields required, must be numbers, `bedrooms` /
 `year_built` must be integers, plus sanity ranges (`square_footage` and
 `lot_size` strictly positive and < 100,000 / < 300,000, `bathrooms` > 0 and
-< 20 with half baths allowed, `bedrooms` integer 1–19, distance > 0 and
+< 20 with half baths allowed, `bedrooms` integer 1–20, distance > 0 and
 < 100 miles, `year_built` 1950–current year + 5, `school_rating` 0–10, ...).
 
 Status codes:

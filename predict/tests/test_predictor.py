@@ -104,19 +104,20 @@ def test_open_ranges_accept_inside_and_reject_boundaries(predictor):
         [
             valid_item(square_footage=1),
             valid_item(bedrooms=19),
+            valid_item(bedrooms=20),
             valid_item(bathrooms=0.5),
             valid_item(lot_size=1),
             valid_item(distance_to_city_center=0.1),
         ]
     )
-    assert ok.ok_count == 5
+    assert ok.ok_count == 6
 
     bad = predictor.predict_many(
         [
             valid_item(square_footage=0),
             valid_item(square_footage=100_000),
             valid_item(bedrooms=0),
-            valid_item(bedrooms=20),
+            valid_item(bedrooms=21),
             valid_item(bathrooms=0),
             valid_item(bathrooms=20),
             valid_item(lot_size=0),

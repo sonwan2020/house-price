@@ -14,12 +14,21 @@ import {
 } from "recharts";
 import { formatCompact, formatPrice } from "@/lib/format";
 
+/** One formatted feature of the entity behind a bar ("Square footage:
+ * 2,400 sq ft"), shown in the hover tooltip when provided. */
+export interface FeatureLine {
+  label: string;
+  value: string;
+}
+
 /** One bar per property. The stable id drives the colour slot so colours
  * follow the entity, never its position in the current list. */
 export interface ChartDatum {
   id: string;
   label: string;
   value: number;
+  /** Feature lines of the entity, listed in the hover tooltip. */
+  features?: FeatureLine[];
 }
 
 /** Validated categorical slots, light mode (dataviz palette). */
@@ -64,6 +73,7 @@ function ChartTooltip({
 }: Partial<TooltipContentProps<number, string>> & { metricLabel: string }) {
   const row = payload?.[0]?.payload as (ChartDatum & { color?: string }) | undefined;
   if (!active || !row) return null;
+  const features = row.features ?? [];
   return (
     <div className="rounded-md border border-hairline bg-surface px-3 py-2 shadow-md">
       <div className="flex items-center gap-2">
@@ -77,6 +87,16 @@ function ChartTooltip({
         {metricLabel}{" "}
         <span className="font-semibold tabular-nums text-ink">{formatPrice(row.value)}</span>
       </p>
+      {features.length > 0 && (
+        <div className="mt-2 grid grid-cols-2 gap-x-4 border-t border-hairline pt-2">
+          {features.map((feature) => (
+            <p key={feature.label} className="whitespace-nowrap text-xs leading-relaxed">
+              <span className="text-ink-muted">{feature.label}: </span>
+              <span className="tabular-nums text-ink">{feature.value}</span>
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -85,7 +105,9 @@ function ChartTooltip({
  * Bar chart of prices by entity. Mark specs follow the dataviz system:
  * thin bars (24px) with rounded data-ends, hairline grid, muted axes,
  * direct value labels at the tips, and a legend whenever more than one
- * entity is drawn (single-entity callers render a stat tile instead).
+ * entity is drawn. Bars always rise from 0 (the Y domain starts there),
+ * even for a single entity, and the hover tooltip lists the entity's
+ * features when the caller provides them.
  */
 export default function PriceBarChart({
   data,

@@ -32,7 +32,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 export const FIELD_DEFS: readonly FieldDef[] = [
   { name: "square_footage", label: "Square footage", unit: "sq ft", step: "1", min: 0, minExclusive: true, max: 100_000, maxExclusive: true },
-  { name: "bedrooms", label: "Bedrooms", step: "1", integer: true, min: 1, max: 19 },
+  { name: "bedrooms", label: "Bedrooms", step: "1", integer: true, min: 1, max: 20 },
   { name: "bathrooms", label: "Bathrooms", step: "0.5", min: 0, minExclusive: true, max: 20, maxExclusive: true },
   { name: "year_built", label: "Year built", step: "1", integer: true, min: 1950, max: CURRENT_YEAR + 5, select: true },
   { name: "lot_size", label: "Lot size", unit: "sq ft", step: "1", min: 0, minExclusive: true, max: 300_000, maxExclusive: true },
