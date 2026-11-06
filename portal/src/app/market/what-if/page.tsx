@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import ModelCoefficients from "@/components/ModelCoefficients";
 import WhatIfView from "@/components/WhatIfView";
+import { baselineFromParams } from "@/lib/validation";
 
 export const metadata: Metadata = {
   title: "What-if analysis · Property Value Estimator",
@@ -9,21 +8,19 @@ export const metadata: Metadata = {
 
 /**
  * What-if analysis tool (App 2 frontend): scenarios predicted by the model.
- * Dynamic like the Model page — the coefficient card depends on the
- * external prediction service.
+ * Dynamic because a run hits the external services per request.
+ *
+ * A listing selected on the market page arrives as ?square_footage=… search
+ * params; valid ones seed the baseline form (invalid ones fall back to the
+ * defaults).
  */
 export const dynamic = "force-dynamic";
 
-export default function WhatIfPage() {
-  return (
-    <WhatIfView
-      context={
-        <Suspense
-          fallback={<p className="text-sm text-ink-muted">Loading model coefficients…</p>}
-        >
-          <ModelCoefficients />
-        </Suspense>
-      }
-    />
-  );
+export default async function WhatIfPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const initialBaseline = baselineFromParams(await searchParams);
+  return <WhatIfView initialBaseline={initialBaseline} />;
 }

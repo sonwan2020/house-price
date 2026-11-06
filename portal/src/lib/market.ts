@@ -56,6 +56,29 @@ export interface MarketListing {
   price: number;
 }
 
+/** Listing features carried over as the what-if baseline, in form order. */
+export const WHAT_IF_BASELINE_FIELDS = [
+  "square_footage",
+  "bedrooms",
+  "bathrooms",
+  "year_built",
+  "lot_size",
+  "distance_to_city_center",
+  "school_rating",
+] as const;
+
+/**
+ * Query string seeding the what-if baseline from a dataset listing,
+ * e.g. "?square_footage=1500&bedrooms=3&…" (always with the leading "?").
+ */
+export function baselineToQuery(listing: MarketListing): string {
+  const params = new URLSearchParams();
+  for (const field of WHAT_IF_BASELINE_FIELDS) {
+    params.set(field, String(listing[field]));
+  }
+  return `?${params.toString()}`;
+}
+
 export interface ListingsPage {
   total: number;
   page: number;

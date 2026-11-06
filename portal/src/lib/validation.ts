@@ -75,6 +75,29 @@ export function validateFeatures(values: FeatureValues): ValidationErrors {
   return errors;
 }
 
+/**
+ * Baseline values taken from URL search params (the market table's
+ * "What-if analysis" links). Only fields the form knows, given once as a
+ * string and passing that field's range rules are kept; anything else is
+ * dropped so the form falls back to its default for that field.
+ */
+export function baselineFromParams(
+  params: Record<string, string | string[] | undefined>,
+): Partial<FeatureValues> {
+  const values: Partial<FeatureValues> = {};
+  for (const field of FIELD_DEFS) {
+    const raw = params[field.name];
+    if (typeof raw !== "string" || raw.trim() === "") continue;
+    const probe = Object.fromEntries(
+      FIELD_DEFS.map((candidate) => [candidate.name, candidate.name === field.name ? raw : ""]),
+    ) as FeatureValues;
+    if (!validateFeatures(probe)[field.name]) {
+      values[field.name] = raw;
+    }
+  }
+  return values;
+}
+
 /** Convert a validated form into the numbers sent to the API. */
 export function toHouseFeatures(values: FeatureValues): HouseFeatures {
   const features = {} as Record<FieldName, number>;

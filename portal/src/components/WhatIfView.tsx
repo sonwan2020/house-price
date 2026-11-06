@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import { useBaselinePrice } from "@/hooks/useBaselinePrice";
 import { useWhatIfHistory } from "@/hooks/useWhatIfHistory";
 import { formatDateTime, formatNumber, formatPrice } from "@/lib/format";
 import { newId } from "@/lib/history";
@@ -59,11 +60,20 @@ const todayStamp = (): string => new Date().toISOString().slice(0, 10);
  * What-if analysis tool (a.iii): a baseline house plus scenarios that
  * change one feature each. The batch is predicted by the Task 1 model via
  * the market-api; outcomes show the new price and the delta vs baseline.
- * `context` renders between the header and the form (server-rendered,
- * e.g. the model coefficients).
+ * `initialBaseline` seeds the baseline form (the market table sends a
+ * selected listing's features over as URL params). The baseline card also
+ * shows the property's predicted price, updated live as the fields change.
  */
-export default function WhatIfView({ context }: { context?: React.ReactNode }) {
-  const [baseline, setBaseline] = useState<FeatureValues>(BASELINE_DEFAULTS);
+export default function WhatIfView({
+  initialBaseline,
+}: {
+  initialBaseline?: Partial<FeatureValues>;
+}) {
+  const [baseline, setBaseline] = useState<FeatureValues>({
+    ...BASELINE_DEFAULTS,
+    ...initialBaseline,
+  });
+  const baselinePrice = useBaselinePrice(baseline);
   const [baselineErrors, setBaselineErrors] = useState<ValidationErrors>({});
   const [scenarios, setScenarios] = useState<ScenarioForm[]>([createScenario()]);
   const [submitError, setSubmitError] = useState<string[] | null>(null);
@@ -200,8 +210,6 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
         </Link>
       </header>
 
-      {context && <div className="mt-4">{context}</div>}
-
       <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-4">
         <div className="rounded-lg border border-hairline bg-surface p-5">
           <h2 className="text-sm font-semibold text-ink">Baseline property</h2>
@@ -247,6 +255,28 @@ export default function WhatIfView({ context }: { context?: React.ReactNode }) {
                 )}
               </label>
             ))}
+          </div>
+          {/* Live predicted price of the baseline property (Task 1 model,
+              re-predicted shortly after each edit). */}
+          <div
+            aria-live="polite"
+            className="mt-4 flex flex-wrap items-center gap-3 rounded-md border border-hairline bg-page px-3 py-2"
+          >
+            <span className="text-xs font-medium text-ink-muted">Predicted price</span>
+            {baselinePrice.status === "success" && (
+              <span className="text-lg font-semibold tabular-nums text-ink">
+                {formatPrice(baselinePrice.price)}
+              </span>
+            )}
+            {baselinePrice.status === "loading" && (
+              <span className="text-sm text-ink-muted">Predicting…</span>
+            )}
+            {baselinePrice.status === "error" && (
+              <span className="text-xs text-critical">✕ {baselinePrice.message}</span>
+            )}
+            {baselinePrice.status === "idle" && (
+              <span className="text-sm text-ink-muted">—</span>
+            )}
           </div>
         </div>
 

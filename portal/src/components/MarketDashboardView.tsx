@@ -179,6 +179,7 @@ export default function MarketDashboardView({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(25);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const setFilter = (key: keyof MarketFilterState, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -440,15 +441,20 @@ export default function MarketDashboardView({
             ✕ {listings.error}
           </p>
         )}
+        <p className="mt-3 text-xs text-ink-muted">
+          Select a row to open its what-if analysis — the listing becomes the baseline.
+        </p>
         <div className="mt-3">
           <MarketDataTable
             page={listings.data}
             loading={listings.loading}
             sortBy={sortBy}
             sortDir={sortDir}
+            selectedId={selectedId}
             onSort={handleSort}
             onPageChange={setPage}
             onSizeChange={handleSizeChange}
+            onSelect={setSelectedId}
           />
         </div>
       </div>

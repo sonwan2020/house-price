@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { formatNumber, formatPrice } from "@/lib/format";
-import type { MarketListing, ListingsPage } from "@/lib/market";
+import { baselineToQuery, type MarketListing, type ListingsPage } from "@/lib/market";
 
 /** Sortable columns; keys match the market-api sort_by values. */
 const COLUMNS: { key: string; label: string; render: (l: MarketListing) => string }[] = [
@@ -22,23 +23,32 @@ const PAGE_SIZES = [10, 25, 50];
  * Server-driven data table (a.v): column sorting and paging are handled
  * by the market-api so the contract works beyond the demo dataset. Scrolls
  * horizontally on narrow screens.
+ *
+ * Rows are click-selectable (single selection): the selected row is
+ * highlighted and shows an inline "What-if analysis" button that opens the
+ * what-if tool with this listing as the baseline. Clicking the selected
+ * row again clears the selection.
  */
 export default function MarketDataTable({
   page,
   loading,
   sortBy,
   sortDir,
+  selectedId,
   onSort,
   onPageChange,
   onSizeChange,
+  onSelect,
 }: {
   page: ListingsPage | null;
   loading: boolean;
   sortBy: string;
   sortDir: "asc" | "desc";
+  selectedId: number | null;
   onSort: (key: string) => void;
   onPageChange: (next: number) => void;
   onSizeChange: (size: number) => void;
+  onSelect: (id: number | null) => void;
 }) {
   const total = page?.total ?? 0;
   const rows = page?.listings ?? [];
@@ -78,37 +88,67 @@ export default function MarketDataTable({
                   </th>
                 );
               })}
+              <th aria-label="Actions" className="py-2 pr-0" />
             </tr>
           </thead>
           <tbody>
             {loading && rows.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length} className="py-8 text-center text-sm text-ink-muted">
+                <td colSpan={COLUMNS.length + 1} className="py-8 text-center text-sm text-ink-muted">
                   Loading…
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length} className="py-8 text-center text-sm text-ink-muted">
+                <td colSpan={COLUMNS.length + 1} className="py-8 text-center text-sm text-ink-muted">
                   No listings match the selected filters.
                 </td>
               </tr>
             )}
-            {rows.map((listing) => (
-              <tr key={listing.id} className="border-b border-hairline last:border-0">
-                {COLUMNS.map((column) => (
-                  <td
-                    key={column.key}
-                    className={`px-1 py-2 pr-4 tabular-nums first:pl-0 ${
-                      column.key === "price" ? "text-sm font-semibold text-ink" : "text-ink-secondary"
-                    }`}
-                  >
-                    {column.render(listing)}
+            {rows.map((listing) => {
+              const selected = listing.id === selectedId;
+              const toggle = () => onSelect(selected ? null : listing.id);
+              return (
+                <tr
+                  key={listing.id}
+                  aria-selected={selected}
+                  tabIndex={0}
+                  onClick={toggle}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      toggle();
+                    }
+                  }}
+                  className={`cursor-pointer border-b border-hairline transition-colors last:border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/60 ${
+                    selected ? "bg-accent/10 hover:bg-accent/10" : "hover:bg-accent/5"
+                  }`}
+                >
+                  {COLUMNS.map((column) => (
+                    <td
+                      key={column.key}
+                      className={`px-1 py-2 pr-4 tabular-nums first:pl-0 ${
+                        column.key === "price" ? "text-sm font-semibold text-ink" : "text-ink-secondary"
+                      }`}
+                    >
+                      {column.render(listing)}
+                    </td>
+                  ))}
+                  <td className="py-2 pr-0 text-right">
+                    {selected && (
+                      <Link
+                        href={`/market/what-if${baselineToQuery(listing)}`}
+                        onClick={(event) => event.stopPropagation()}
+                        className="btn-primary whitespace-nowrap px-3 py-1 text-xs"
+                      >
+                        What-if analysis
+                      </Link>
+                    )}
                   </td>
-                ))}
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

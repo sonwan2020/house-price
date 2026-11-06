@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { FIELD_DEFS, toHouseFeatures, validateFeatures, type FeatureValues } from "./validation";
+import {
+  baselineFromParams,
+  FIELD_DEFS,
+  toHouseFeatures,
+  validateFeatures,
+  type FeatureValues,
+} from "./validation";
 
 const valid = (): FeatureValues => ({
   square_footage: "2000",
@@ -125,5 +131,39 @@ describe("toHouseFeatures", () => {
     expect(features.year_built).toBe(1995);
     expect(features.school_rating).toBeCloseTo(7.5);
     expect(features.square_footage).toBe(2000);
+  });
+});
+
+describe("baselineFromParams", () => {
+  it("keeps valid single-string feature params", () => {
+    const values = baselineFromParams({
+      square_footage: "1800",
+      bedrooms: "4",
+      school_rating: "8.5",
+    });
+    expect(values).toEqual({ square_footage: "1800", bedrooms: "4", school_rating: "8.5" });
+  });
+
+  it("drops unknown keys, empty values and array values", () => {
+    expect(
+      baselineFromParams({
+        price: "450000",
+        id: "12",
+        bedrooms: "",
+        square_footage: ["1800"],
+      }),
+    ).toEqual({});
+  });
+
+  it("drops values that fail the field's range rules", () => {
+    expect(
+      baselineFromParams({
+        square_footage: "0", // exclusive minimum
+        bedrooms: "2.5", // must be whole
+        year_built: "1949", // below range
+        distance_to_city_center: "100", // exclusive maximum
+        school_rating: "7.5", // valid — still kept
+      }),
+    ).toEqual({ school_rating: "7.5" });
   });
 });
